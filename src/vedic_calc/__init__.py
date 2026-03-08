@@ -14,6 +14,20 @@ Quick start:
     ... )
     >>> print(chart.ascendant.sign)
     <Sign.GEMINI: 3>
+
+    >>> from vedic_calc import calculate_dasha
+    >>> periods = calculate_dasha(chart)
+    >>> periods[0].lord  # First mahadasha planet
+    <Planet.MOON: 1>
+
+    >>> from vedic_calc import calculate_panchanga
+    >>> p = calculate_panchanga(2026, 3, 8, 19.076, 72.878, 5.5)
+    >>> p.tithi_name
+    'Shukla Dashami'
+
+    >>> from vedic_calc import render_south_indian
+    >>> print(render_south_indian(chart))
+    ... (ASCII chart)
 """
 
 from vedic_calc.core.types import (
@@ -24,3 +38,6 @@ from vedic_calc.core.types import (
     PlanetPosition,
 )
 from vedic_calc.chart.calculator import calculate_chart
+from vedic_calc.chart.renderer import render_north_indian, render_south_indian, render_svg
+from vedic_calc.dasha.calculator import calculate_dasha, get_current_dasha
+from vedic_calc.panchanga.calculator import calculate_panchanga

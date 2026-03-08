@@ -7,12 +7,14 @@ vedic-calc follows a layered architecture with strict dependency boundaries:
 ```
 ┌─────────────────────────────────────────────┐
 │              Public API                      │
-│         calculate_chart()                    │
-│         calculate_dasha()  (Day 2)           │
-│         get_panchanga()    (Day 2)           │
+│   calculate_chart()                          │
+│   calculate_dasha()  │  get_current_dasha()  │
+│   calculate_panchanga()                      │
+│   render_south_indian()  │  render_svg()     │
 ├─────────────────────────────────────────────┤
-│            Chart Layer                       │
-│   calculator.py  │  helpers (sign, nak, etc) │
+│            Calculation Layer                 │
+│   chart/calculator.py  │  dasha/calculator   │
+│   panchanga/calculator │  chart/renderer     │
 ├─────────────────────────────────────────────┤
 │            Core Layer                        │
 │   types.py  │  constants.py  │  ephemeris.py │
@@ -30,7 +32,7 @@ This gives us:
 
 - **Testability** — mock `ephemeris.py` to test all chart logic without the Swiss Ephemeris
 - **Swappability** — could replace pyswisseph with another engine (REST API, WASM, etc.)
-- **Simplicity** — pyswisseph has a complex C-style API; we expose 4 clean Python functions
+- **Simplicity** — pyswisseph has a complex C-style API; we expose clean Python functions
 
 ### What ephemeris.py provides
 
@@ -41,8 +43,11 @@ This gives us:
 | `get_planet_longitude()` | Julian Day, planet, ayanamsa | (longitude, is_retrograde) |
 | `get_ascendant()` | Julian Day, lat, lon, ayanamsa | longitude (float) |
 | `get_sunrise_sunset()` | Julian Day, lat, lon | (sunrise_jd, sunset_jd) |
+| `jd_to_datetime()` | Julian Day, timezone_offset | Python datetime |
 
 ## Data Flow
+
+### Birth Chart
 
 ```
 Birth Details (date, time, lat/lon, timezone)
@@ -68,6 +73,60 @@ Convert to UT → Julian Day
   BirthChart (Pydantic model, frozen, JSON-serializable)
 ```
 
+### Dasha
+
+```
+BirthChart
+    │
+    ├── Moon's nakshatra lord → Starting mahadasha planet
+    ├── Moon's degree in nakshatra / 13.333 → Elapsed fraction
+    │
+    ▼
+  Vimsottari sequence (rotated to start from birth lord)
+    │
+    ├── 9 mahadashas (first one partial)
+    ├── 81 antardashas (proportional subdivision)
+    └── 729 pratyantardashas (one more level)
+    │
+    ▼
+  list[DashaPeriod] (flat, chronological, with level field)
+```
+
+### Panchanga
+
+```
+Date + Location
+    │
+    ├── get_sunrise_sunset() → Sunrise JD
+    ├── get_planet_longitude(MOON) at sunrise → Moon sidereal lon
+    ├── get_planet_longitude(SUN) at sunrise  → Sun sidereal lon
+    │
+    ▼
+  Five computations:
+    ├── (Moon - Sun) % 360 / 12  → Tithi (1-30)
+    ├── Moon lon / 13.333        → Nakshatra (1-27)
+    ├── (Moon + Sun) % 360 / 13.333 → Yoga (1-27)
+    ├── (Moon - Sun) % 360 / 6   → Karana (1-60)
+    └── datetime.weekday()       → Vara
+    │
+    ▼
+  PanchangaInfo (Pydantic model)
+```
+
+### Chart Rendering
+
+```
+BirthChart
+    │
+    ├── Map planets to their signs
+    ├── Map houses to grid positions
+    │
+    ▼
+  ASCII (South/North Indian style)
+    or
+  SVG (South/North Indian style)
+```
+
 ## Module Responsibilities
 
 ### `core/constants.py`
@@ -78,6 +137,8 @@ All enumerations and lookup tables. Data from BPHS and Surya Siddhanta.
 - `Nakshatra` — 27 lunar mansions
 - `Ayanamsa` — precession correction modes
 - Lookup tables: sign lords, nakshatra lords, Vimsottari years/order
+- Panchanga tables: tithi names, yoga names, karana names, vara names
+- Rendering tables: planet abbreviations, sign abbreviations
 
 ### `core/types.py`
 Pydantic models for all data structures. All frozen (immutable).
@@ -86,19 +147,37 @@ Pydantic models for all data structures. All frozen (immutable).
 - `PlanetPosition` — longitude, sign, degree, nakshatra, retrograde
 - `HousePosition` — house number, sign, lord
 - `BirthChart` — the complete chart
-- `DashaPeriod` — planetary period (used by dasha module)
-- `PanchangaInfo` — daily calendar (used by panchanga module)
+- `DashaPeriod` — planetary period with start/end dates
+- `PanchangaInfo` — daily five-element calendar
 
 ### `core/ephemeris.py`
-Thin wrapper around pyswisseph. Only module that imports `swisseph`.
+Thin wrapper around pyswisseph. **Only module that imports `swisseph`.**
 
 ### `chart/calculator.py`
-Main entry point. Pure functions that transform longitudes into astrology data.
+Main birth chart entry point. Pure functions that transform longitudes into astrology data.
 
 - `calculate_chart()` — public API, returns `BirthChart`
 - `longitude_to_sign()` — 45° → Taurus
 - `longitude_to_nakshatra_info()` — 45° → Rohini pada 2
 - `build_houses()` — Whole Sign houses from ascendant
+
+### `chart/renderer.py`
+Visual chart rendering. No external dependencies.
+
+- `render_south_indian()` — ASCII art, signs in fixed positions
+- `render_north_indian()` — ASCII art, houses in fixed positions
+- `render_svg()` — SVG markup for web/mobile display
+
+### `dasha/calculator.py`
+Vimsottari dasha (planetary period) calculation.
+
+- `calculate_dasha()` — full dasha timeline (mahadasha + antardasha + pratyantardasha)
+- `get_current_dasha()` — active periods for a specific date
+
+### `panchanga/calculator.py`
+Daily Vedic calendar computation.
+
+- `calculate_panchanga()` — computes all five panchanga elements for a date/location
 
 ## Design Decisions
 
@@ -116,3 +195,9 @@ Lahiri (Chitrapaksha) is the official ayanamsa of the Indian government, adopted
 
 ### Why IntEnum for planets/signs?
 Integer enums allow both human-readable code (`Planet.JUPITER`) and mathematical operations when needed. They also serialize cleanly to JSON.
+
+### Why flat list for dashas?
+A flat `list[DashaPeriod]` (instead of nested trees) is simpler to serialize, filter, and iterate. The `level` field on each period distinguishes mahadasha/antardasha/pratyantardasha. To find "all antardashas within Jupiter mahadasha", filter by date range.
+
+### Why sunrise-based panchanga?
+The Vedic "day" (ahoratra) begins at sunrise, not midnight. All panchanga elements are computed at the sunrise moment for the given location, following traditional practice.

@@ -34,6 +34,8 @@ TIME SYSTEM:
 
 from __future__ import annotations
 
+from datetime import datetime
+
 import swisseph as swe
 
 from vedic_calc.core.constants import Ayanamsa, Planet, PLANET_TO_SWE
@@ -241,6 +243,50 @@ def get_ascendant(
 
     # Convert tropical → sidereal (same formula as planets)
     return (tropical_asc - ayanamsa) % 360.0
+
+
+def jd_to_datetime(jd: float, timezone_offset: float = 0.0) -> datetime:
+    """Convert a Julian Day number back to a Python datetime.
+
+    This is the reverse of _to_julian_day(). Used by the panchanga module
+    to convert sunrise/sunset JD values back to human-readable times.
+
+    Args:
+        jd: Julian Day number.
+        timezone_offset: Hours to add for local time (e.g., 5.5 for IST).
+
+    Returns:
+        A Python datetime in local time.
+
+    Example:
+        >>> jd = _to_julian_day(2000, 1, 1, 12.0)  # Noon UT
+        >>> dt = jd_to_datetime(jd, 5.5)  # Convert to IST
+        >>> dt.hour
+        17  # 12:00 UT + 5:30 = 17:30 IST
+    """
+    # swe.revjul returns (year, month, day, hour_decimal) in UT
+    year, month, day, hour_ut = swe.revjul(jd)
+    # Adjust for timezone
+    hour_local = hour_ut + timezone_offset
+    # Handle day rollover (e.g., 25.5 hours → next day, 1.5 hours)
+    day_offset = 0
+    if hour_local >= 24.0:
+        hour_local -= 24.0
+        day_offset = 1
+    elif hour_local < 0.0:
+        hour_local += 24.0
+        day_offset = -1
+
+    hours = int(hour_local)
+    remainder = (hour_local - hours) * 60
+    minutes = int(remainder)
+    seconds = int((remainder - minutes) * 60)
+
+    dt = datetime(int(year), int(month), int(day), hours, minutes, seconds)
+    if day_offset != 0:
+        from datetime import timedelta
+        dt += timedelta(days=day_offset)
+    return dt
 
 
 def get_sunrise_sunset(

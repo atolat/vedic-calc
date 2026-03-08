@@ -405,6 +405,174 @@ VIMSOTTARI_TOTAL_YEARS = 120
 # The integer values below correspond to Swiss Ephemeris ayanamsa mode
 # constants (passed to swe.set_sid_mode()).
 
+# ---------------------------------------------------------------------------
+# Panchanga constants
+# ---------------------------------------------------------------------------
+# The Panchanga (five-limbed calendar) requires name lookups for its
+# five elements: tithi, nakshatra, yoga, karana, and vara.
+#
+# Source: Surya Siddhanta, various panchanga reference tables.
+
+# TITHI NAMES (30 lunar days per month)
+# Tithis 1-15 = Shukla Paksha (waxing/bright half: new moon → full moon)
+# Tithis 16-30 = Krishna Paksha (waning/dark half: full moon → new moon)
+# Each tithi = 12° of Moon-Sun angular separation.
+# Formula: tithi_number = floor((moon_lon - sun_lon) % 360 / 12) + 1
+#
+# The 15 tithi names repeat in both pakshas, except:
+#   - Tithi 15 = Purnima (full moon) instead of "Panchami"
+#   - Tithi 30 = Amavasya (new moon) instead of "Panchami"
+TITHI_NAMES: dict[int, str] = {
+    1: "Shukla Pratipada",
+    2: "Shukla Dwitiya",
+    3: "Shukla Tritiya",
+    4: "Shukla Chaturthi",
+    5: "Shukla Panchami",
+    6: "Shukla Shashthi",
+    7: "Shukla Saptami",
+    8: "Shukla Ashtami",
+    9: "Shukla Navami",
+    10: "Shukla Dashami",
+    11: "Shukla Ekadashi",
+    12: "Shukla Dwadashi",
+    13: "Shukla Trayodashi",
+    14: "Shukla Chaturdashi",
+    15: "Purnima",             # Full moon
+    16: "Krishna Pratipada",
+    17: "Krishna Dwitiya",
+    18: "Krishna Tritiya",
+    19: "Krishna Chaturthi",
+    20: "Krishna Panchami",
+    21: "Krishna Shashthi",
+    22: "Krishna Saptami",
+    23: "Krishna Ashtami",
+    24: "Krishna Navami",
+    25: "Krishna Dashami",
+    26: "Krishna Ekadashi",
+    27: "Krishna Dwadashi",
+    28: "Krishna Trayodashi",
+    29: "Krishna Chaturdashi",
+    30: "Amavasya",            # New moon
+}
+
+# YOGA NAMES (27 nitya yogas)
+# Yoga = a luni-solar combination based on the SUM of Moon and Sun longitudes.
+# Each yoga spans 13°20' (same span as a nakshatra, but completely different concept).
+# Formula: yoga_number = floor((moon_lon + sun_lon) % 360 / 13.333) + 1
+#
+# Some yogas are considered auspicious (e.g., Siddhi, Shubha, Shiva)
+# and some inauspicious (e.g., Vyatipata, Vaidhriti, Ganda).
+# Source: Surya Siddhanta.
+YOGA_NAMES: dict[int, str] = {
+    1: "Vishkambha",
+    2: "Priti",
+    3: "Ayushman",
+    4: "Saubhagya",
+    5: "Shobhana",
+    6: "Atiganda",
+    7: "Sukarma",
+    8: "Dhriti",
+    9: "Shoola",
+    10: "Ganda",
+    11: "Vriddhi",
+    12: "Dhruva",
+    13: "Vyaghata",
+    14: "Harshana",
+    15: "Vajra",
+    16: "Siddhi",
+    17: "Vyatipata",
+    18: "Variyan",
+    19: "Parigha",
+    20: "Shiva",
+    21: "Siddha",
+    22: "Sadhya",
+    23: "Shubha",
+    24: "Shukla",
+    25: "Brahma",
+    26: "Indra",
+    27: "Vaidhriti",
+}
+
+# KARANA NAMES (60 karanas per lunar month)
+# A karana is half a tithi (each tithi has 2 karanas).
+# Each karana = 6° of Moon-Sun angular separation.
+# Formula: karana_number = floor((moon_lon - sun_lon) % 360 / 6) + 1
+#
+# There are 11 karana types:
+#   4 FIXED karanas (appear once per month at specific positions):
+#     - Kimstughna: karana 1 (second half of Amavasya/first half of Shukla Pratipada)
+#     - Shakuni: karana 58
+#     - Chatushpada: karana 59
+#     - Nagava: karana 60
+#
+#   7 REPEATING karanas (cycle 8 times through positions 2-57):
+#     Bava → Balava → Kaulava → Taitila → Garaja → Vanija → Vishti
+#
+# Vishti (also called "Bhadra") is considered inauspicious.
+# Source: Surya Siddhanta, various Panchanga references.
+
+# Build the karana name lookup programmatically
+_REPEATING_KARANAS = [
+    "Bava", "Balava", "Kaulava", "Taitila", "Garaja", "Vanija", "Vishti",
+]
+KARANA_NAMES: dict[int, str] = {1: "Kimstughna"}
+for i in range(2, 58):
+    KARANA_NAMES[i] = _REPEATING_KARANAS[(i - 2) % 7]
+KARANA_NAMES[58] = "Shakuni"
+KARANA_NAMES[59] = "Chatushpada"
+KARANA_NAMES[60] = "Nagava"
+
+# VARA NAMES (weekdays, named after planets)
+# In Vedic tradition, each day of the week is ruled by a planet:
+#   Sunday = Sun (Ravi), Monday = Moon (Soma), Tuesday = Mars (Mangala),
+#   Wednesday = Mercury (Budha), Thursday = Jupiter (Guru),
+#   Friday = Venus (Shukra), Saturday = Saturn (Shani)
+#
+# Keyed by Python's datetime.weekday() (0=Monday, 6=Sunday).
+VARA_NAMES: dict[int, str] = {
+    0: "Monday (Somavara)",       # Moon
+    1: "Tuesday (Mangalavara)",   # Mars
+    2: "Wednesday (Budhavara)",   # Mercury
+    3: "Thursday (Guruvara)",     # Jupiter
+    4: "Friday (Shukravara)",     # Venus
+    5: "Saturday (Shanivara)",    # Saturn
+    6: "Sunday (Ravivara)",       # Sun
+}
+
+# Planet abbreviations for chart rendering
+# Used by the kundali renderer to display planets compactly in chart cells.
+PLANET_ABBREVIATIONS: dict["Planet", str] = {
+    Planet.SUN: "Su",
+    Planet.MOON: "Mo",
+    Planet.MARS: "Ma",
+    Planet.MERCURY: "Me",
+    Planet.JUPITER: "Ju",
+    Planet.VENUS: "Ve",
+    Planet.SATURN: "Sa",
+    Planet.RAHU: "Ra",
+    Planet.KETU: "Ke",
+}
+
+# Sign abbreviations for chart rendering
+SIGN_ABBREVIATIONS: dict["Sign", str] = {
+    Sign.ARIES: "Ar",
+    Sign.TAURUS: "Ta",
+    Sign.GEMINI: "Ge",
+    Sign.CANCER: "Cn",
+    Sign.LEO: "Le",
+    Sign.VIRGO: "Vi",
+    Sign.LIBRA: "Li",
+    Sign.SCORPIO: "Sc",
+    Sign.SAGITTARIUS: "Sg",
+    Sign.CAPRICORN: "Cp",
+    Sign.AQUARIUS: "Aq",
+    Sign.PISCES: "Pi",
+}
+
+
+# ---------------------------------------------------------------------------
+# Ayanamsa modes
+# ---------------------------------------------------------------------------
 class Ayanamsa(IntEnum):
     """Supported ayanamsa (precession correction) modes.
 
