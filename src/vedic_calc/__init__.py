@@ -41,3 +41,4 @@ from vedic_calc.chart.calculator import calculate_chart
 from vedic_calc.chart.renderer import render_north_indian, render_south_indian, render_svg
 from vedic_calc.dasha.calculator import calculate_dasha, get_current_dasha
 from vedic_calc.panchanga.calculator import calculate_panchanga
+from vedic_calc.compatibility.calculator import calculate_compatibility, CompatibilityResult
