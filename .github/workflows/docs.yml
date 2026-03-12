@@ -33,13 +33,11 @@ jobs:
         run: uv python install 3.13
 
       - name: Install dependencies
-        run: uv sync --extra docs --extra dev --python 3.13
+        run: uv sync --extra docs --extra dev --extra comparison --python 3.13
 
       - name: Run comparison tests & generate report
         continue-on-error: true
-        run: |
-          uv sync --extra comparison --python 3.13 || true
-          uv run --python 3.13 pytest tests/comparison/ -v --tb=short || true
+        run: uv run --python 3.13 pytest tests/comparison/ -v --tb=short || true
 
       - name: Inject comparison report into docs
         run: |
