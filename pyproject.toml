@@ -17,7 +17,13 @@ dev = [
     "pytest-xdist>=3.0",
 ]
 comparison = [
-    "PyJHora>=1.0",
+    "PyJHora>=4.5",
+    "numpy",
+    "geocoder",
+    "pytz",
+    "timezonefinder",
+    "geopy",
+    "python-dateutil",
     "pytest-xdist>=3.0",
 ]
 docs = [

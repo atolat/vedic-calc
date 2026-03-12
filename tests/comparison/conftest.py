@@ -4,12 +4,16 @@ This module provides:
 - Index mapping between vedic-calc and PyJHora conventions
 - Reference chart fixtures for consistent testing
 - ComparisonRecord dataclass for collecting test results
+- Helper functions to create PyJHora inputs from reference chart data
 """
 
 from __future__ import annotations
 
+import json
+import os
 import time
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any
 
 import pytest
@@ -22,41 +26,119 @@ from vedic_calc.core.constants import Ayanamsa, Planet, Sign
 # Index mapping: vedic-calc ↔ PyJHora
 # ---------------------------------------------------------------------------
 # vedic-calc: Sun=0, Moon=1, Mars=2, Mercury=3, Jupiter=4, Venus=5, Saturn=6, Rahu=7, Ketu=8
-# PyJHora:    Sun=0, Moon=1, Mercury=2, Venus=3, Mars=4, Jupiter=5, Saturn=6, Rahu=7, Ketu=8
+# PyJHora:    Sun=0, Moon=1, Mercury=2, Venus=3, Mars=4, Jupiter=5, Saturn=6, Rahu=11, Ketu=-10
 
-PYJHORA_TO_VC_PLANET: dict[int, int] = {
+# Map vedic-calc Planet enum value → PyJHora planet constant
+VC_TO_PJ_PLANET = {
+    0: 0,    # Sun → Sun
+    1: 1,    # Moon → Moon
+    2: 4,    # Mars → Mars (PyJHora _MARS=4)
+    3: 2,    # Mercury → Mercury (PyJHora _MERCURY=2)
+    4: 5,    # Jupiter → Jupiter (PyJHora _JUPITER=5)
+    5: 3,    # Venus → Venus (PyJHora _VENUS=3)
+    6: 6,    # Saturn → Saturn
+    7: 11,   # Rahu → Rahu (PyJHora _RAHU=11)
+    8: -10,  # Ketu → Ketu (PyJHora _KETU=-10)
+}
+
+PJ_TO_VC_PLANET = {v: k for k, v in VC_TO_PJ_PLANET.items()}
+
+# PyJHora dhasavarga returns planet indices 0-8 sequentially.
+# Verified by comparing D1 output with direct sidereal longitudes:
+# The order is: Sun=0, Moon=1, Mars=2, Mercury=3, Jupiter=4, Venus=5, Saturn=6, Rahu=7, Ketu=8
+# This is the SAME as vedic-calc's Planet enum, so the mapping is identity.
+# Plus Lagna=9, Uranus=10, Neptune=11 (which we skip).
+PJ_DHASA_TO_VC_PLANET = {
     0: 0,  # Sun → Sun
     1: 1,  # Moon → Moon
-    2: 3,  # Mercury → Mercury
-    3: 5,  # Venus → Venus (PyJHora 3=Venus, vc 5=Venus)
-    4: 2,  # Mars → Mars (PyJHora 4=Mars, vc 2=Mars)
-    5: 4,  # Jupiter → Jupiter (PyJHora 5=Jupiter, vc 4=Jupiter... wait, same)
+    2: 2,  # Mars → Mars
+    3: 3,  # Mercury → Mercury
+    4: 4,  # Jupiter → Jupiter
+    5: 5,  # Venus → Venus
     6: 6,  # Saturn → Saturn
     7: 7,  # Rahu → Rahu
     8: 8,  # Ketu → Ketu
 }
 
-VC_TO_PYJHORA_PLANET: dict[int, int] = {v: k for k, v in PYJHORA_TO_VC_PLANET.items()}
-
 # Sign mapping: vedic-calc uses 1-12, PyJHora uses 0-11
-def map_pj_sign(pj_sign: int) -> int:
+def map_pj_sign_to_vc(pj_sign: int) -> int:
     """Convert PyJHora sign (0-11) to vedic-calc Sign (1-12)."""
     return pj_sign + 1
 
 
-def map_vc_sign(vc_sign: int) -> int:
+def map_vc_sign_to_pj(vc_sign: int) -> int:
     """Convert vedic-calc Sign (1-12) to PyJHora sign (0-11)."""
     return vc_sign - 1
 
 
-def map_planet_vc_to_pj(vc_planet: Planet) -> int:
-    """Convert vedic-calc Planet to PyJHora planet index."""
-    return VC_TO_PYJHORA_PLANET[vc_planet.value]
+# PyJHora dasha lord IDs in Vimsottari/Yogini/Ashtottari output:
+# Verified by matching period durations to known dasha cycles.
+# E.g., lord_id=7 has 18yr period = Rahu, lord_id=4 has 16yr = Jupiter.
+# Order: Sun=0, Moon=1, Mars=2, Mercury=3, Jupiter=4, Venus=5, Saturn=6, Rahu=7, Ketu=8
+# Same as vedic-calc and same as dhasavarga — identity mapping.
+PJ_DASHA_LORD_TO_VC = PJ_DHASA_TO_VC_PLANET
 
 
-def map_planet_pj_to_vc(pj_planet: int) -> Planet:
-    """Convert PyJHora planet index to vedic-calc Planet."""
-    return Planet(PYJHORA_TO_VC_PLANET[pj_planet])
+# ---------------------------------------------------------------------------
+# PyJHora helper: create inputs from reference chart data
+# ---------------------------------------------------------------------------
+
+def pj_setup(ref: "ReferenceChart"):
+    """Set up PyJHora and return (jd, place, dob, tob) for a reference chart."""
+    from jhora.panchanga import drik
+    from jhora import utils
+
+    drik.set_ayanamsa_mode("LAHIRI")
+    place = drik.Place(
+        ref.label, ref.latitude, ref.longitude, ref.timezone_offset
+    )
+    dob = drik.Date(ref.year, ref.month, ref.day)
+    tob = (ref.hour, ref.minute, 0)
+    jd = utils.julian_day_number(dob, tob)
+    return jd, place, dob, tob
+
+
+def pj_build_chart_1d(jd, place):
+    """Build PyJHora chart_1d (list of 12 strings) from planet positions."""
+    from jhora.panchanga import drik
+    from jhora import const
+
+    chart_1d = ["" for _ in range(12)]
+
+    # Ascendant
+    asc = drik.ascendant(jd, place)
+    asc_sign = asc[0]
+    if chart_1d[asc_sign]:
+        chart_1d[asc_sign] += "/L"
+    else:
+        chart_1d[asc_sign] = "L"
+
+    # Planets 0-6 (Sun through Saturn)
+    for pid in range(7):
+        lon = drik.sidereal_longitude(jd, pid)
+        sign = int(lon / 30)
+        if chart_1d[sign]:
+            chart_1d[sign] += "/" + str(pid)
+        else:
+            chart_1d[sign] = str(pid)
+
+    # Rahu
+    rahu_lon = drik.sidereal_longitude(jd, const._RAHU)
+    rahu_sign = int(rahu_lon / 30)
+    if chart_1d[rahu_sign]:
+        chart_1d[rahu_sign] += "/7"
+    else:
+        chart_1d[rahu_sign] = "7"
+
+    # Ketu
+    ketu_lon = drik.sidereal_longitude(jd, const._KETU)
+    ketu_sign = int(ketu_lon / 30)
+    if chart_1d[ketu_sign]:
+        chart_1d[ketu_sign] += "/8"
+    else:
+        chart_1d[ketu_sign] = "8"
+
+    return chart_1d
 
 
 # ---------------------------------------------------------------------------
@@ -176,12 +258,9 @@ def pytest_sessionfinish(session, exitstatus):
 
     summary = _collector.summary()
 
-    # Only generate report if there are actual comparison results
-    import json
-    import os
-    from datetime import datetime
-
-    report_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "reports")
+    report_dir = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "reports"
+    )
     os.makedirs(report_dir, exist_ok=True)
 
     # JSON report
@@ -206,23 +285,47 @@ def pytest_sessionfinish(session, exitstatus):
         json.dump(json_report, f, indent=2)
 
     # Markdown report
+    total_pass = sum(c["pass"] for c in summary.values())
+    total_fail = sum(c["fail"] for c in summary.values())
+    total_all = sum(c["total"] for c in summary.values())
+
     lines = [
         "# vedic-calc vs PyJHora Comparison Report",
         f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
         "",
+        f"**Overall: {total_pass}/{total_all} checks passed"
+        f" ({total_pass / total_all * 100:.0f}%)**" if total_all > 0 else "",
+        "",
         "## Summary",
-        "| Feature | Charts Tested | Pass | Fail | Pass Rate |",
-        "|---------|--------------|------|------|-----------|",
+        "",
+        "| Feature | Checks | Pass | Fail | Pass Rate |",
+        "|---------|--------|------|------|-----------|",
     ]
     for feature, counts in summary.items():
-        rate = f"{counts['pass'] / counts['total'] * 100:.0f}%" if counts["total"] > 0 else "N/A"
-        lines.append(
-            f"| {feature} | {counts['total']} | {counts['pass']} | {counts['fail']} | {rate} |"
+        rate = (
+            f"{counts['pass'] / counts['total'] * 100:.0f}%"
+            if counts["total"] > 0
+            else "N/A"
         )
+        lines.append(
+            f"| {feature} | {counts['total']} | {counts['pass']}"
+            f" | {counts['fail']} | {rate} |"
+        )
+
     lines.extend(["", "## Detailed Results", ""])
+    current_feature = None
     for r in _collector.records:
-        status = "✅" if r.match else "❌"
-        lines.append(f"- {status} **{r.feature}** ({r.chart_label}): vc={r.vedic_calc_result}, pj={r.pyjhora_result}")
+        if r.feature != current_feature:
+            current_feature = r.feature
+            lines.append(f"### {current_feature}")
+            lines.append("")
+        status = "PASS" if r.match else "**FAIL**"
+        lines.append(
+            f"- {status} | {r.chart_label} | "
+            f"vc=`{r.vedic_calc_result}` | pj=`{r.pyjhora_result}`"
+            + (f" | {r.notes}" if r.notes else "")
+        )
+    lines.append("")
 
     with open(os.path.join(report_dir, "comparison_report.md"), "w") as f:
         f.write("\n".join(lines))
