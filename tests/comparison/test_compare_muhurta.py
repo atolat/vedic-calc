@@ -25,6 +25,26 @@ from .conftest import REFERENCE_CHARTS, ComparisonRecord, pj_setup
 TOLERANCE_MINUTES = 5.0
 
 
+def _pj_muhurta_setup(ref):
+    """Set up PyJHora for muhurta tests using midnight JD.
+
+    Muhurta is a date-level calculation (not birth-time-level).
+    Using birth time in the JD can cause PyJHora to find the next
+    day's sunrise for evening births (e.g., 22:45 IST).
+    """
+    from jhora.panchanga import drik
+    from jhora import utils
+
+    drik.set_ayanamsa_mode("LAHIRI")
+    place = drik.Place(
+        ref.label, ref.latitude, ref.longitude, ref.timezone_offset
+    )
+    dob = drik.Date(ref.year, ref.month, ref.day)
+    tob = (0, 0, 0)  # Midnight, not birth time
+    jd = utils.julian_day_number(dob, tob)
+    return jd, place
+
+
 def _time_str_to_minutes(t: str) -> float:
     """Convert a PyJHora time string like '14:16:53' to minutes from midnight."""
     parts = t.strip().split(":")
@@ -71,7 +91,7 @@ def test_rahu_kalam(ref, collector):
     """Compare Rahu Kalam window between vedic-calc and PyJHora."""
     from jhora.panchanga import drik
 
-    jd, place, dob, tob = pj_setup(ref)
+    jd, place = _pj_muhurta_setup(ref)
 
     # vedic-calc
     t0 = time.perf_counter()
@@ -120,7 +140,7 @@ def test_yamagandam(ref, collector):
     """Compare Yamagandam window between vedic-calc and PyJHora."""
     from jhora.panchanga import drik
 
-    jd, place, dob, tob = pj_setup(ref)
+    jd, place = _pj_muhurta_setup(ref)
 
     # vedic-calc
     t0 = time.perf_counter()
@@ -169,7 +189,7 @@ def test_gulika_kalam(ref, collector):
     """Compare Gulika Kalam window between vedic-calc and PyJHora."""
     from jhora.panchanga import drik
 
-    jd, place, dob, tob = pj_setup(ref)
+    jd, place = _pj_muhurta_setup(ref)
 
     # vedic-calc
     t0 = time.perf_counter()
@@ -218,7 +238,7 @@ def test_abhijit_muhurta(ref, collector):
     """Compare Abhijit Muhurta window between vedic-calc and PyJHora."""
     from jhora.panchanga import drik
 
-    jd, place, dob, tob = pj_setup(ref)
+    jd, place = _pj_muhurta_setup(ref)
 
     # vedic-calc
     t0 = time.perf_counter()

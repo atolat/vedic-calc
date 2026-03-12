@@ -182,7 +182,8 @@ def test_yogini_sequence_matches_pyjhora(ref, collector):
     pj_result = yogini.get_dhasa_bhukthi(dob, tob, place)
     pj_time = (time.perf_counter() - pj_start) * 1000
 
-    _balance, pj_entries = pj_result
+    # Yogini returns a flat list (no balance), unlike Vimsottari
+    pj_entries = pj_result
     pj_lord_ids = _extract_maha_lord_sequence(pj_entries)
 
     # Map PyJHora sequential planet IDs to vedic-calc Planet values
@@ -234,7 +235,8 @@ def test_ashtottari_sequence_matches_pyjhora(ref, collector):
     pj_result = ashtottari.get_ashtottari_dhasa_bhukthi(jd, place)
     pj_time = (time.perf_counter() - pj_start) * 1000
 
-    _balance, pj_entries = pj_result
+    # Ashtottari returns a flat list (no balance), unlike Vimsottari
+    pj_entries = pj_result
     pj_lord_ids = _extract_maha_lord_sequence(pj_entries)
 
     # Map PyJHora sequential planet IDs to vedic-calc Planet values

@@ -99,13 +99,19 @@ def pj_setup(ref: "ReferenceChart"):
 
 
 def pj_build_chart_1d(jd, place):
-    """Build PyJHora chart_1d (list of 12 strings) from planet positions."""
+    """Build PyJHora chart_1d (list of 12 strings) from planet positions.
+
+    IMPORTANT: jd from pj_setup is in local time. sidereal_longitude expects UTC.
+    Convert using place.timezone (hours offset).
+    """
     from jhora.panchanga import drik
     from jhora import const
 
+    jd_utc = jd - place.timezone / 24.0
+
     chart_1d = ["" for _ in range(12)]
 
-    # Ascendant
+    # Ascendant — uses (jd_utc, place) like drik.ascendant does internally
     asc = drik.ascendant(jd, place)
     asc_sign = asc[0]
     if chart_1d[asc_sign]:
@@ -115,7 +121,7 @@ def pj_build_chart_1d(jd, place):
 
     # Planets 0-6 (Sun through Saturn)
     for pid in range(7):
-        lon = drik.sidereal_longitude(jd, pid)
+        lon = drik.sidereal_longitude(jd_utc, pid)
         sign = int(lon / 30)
         if chart_1d[sign]:
             chart_1d[sign] += "/" + str(pid)
@@ -123,15 +129,15 @@ def pj_build_chart_1d(jd, place):
             chart_1d[sign] = str(pid)
 
     # Rahu
-    rahu_lon = drik.sidereal_longitude(jd, const._RAHU)
+    rahu_lon = drik.sidereal_longitude(jd_utc, const._RAHU)
     rahu_sign = int(rahu_lon / 30)
     if chart_1d[rahu_sign]:
         chart_1d[rahu_sign] += "/7"
     else:
         chart_1d[rahu_sign] = "7"
 
-    # Ketu
-    ketu_lon = drik.sidereal_longitude(jd, const._KETU)
+    # Ketu (Rahu + 180°, since _KETU=-10 is not a valid swe planet ID)
+    ketu_lon = (rahu_lon + 180.0) % 360.0
     ketu_sign = int(ketu_lon / 30)
     if chart_1d[ketu_sign]:
         chart_1d[ketu_sign] += "/8"
