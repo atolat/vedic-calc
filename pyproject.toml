@@ -14,6 +14,11 @@ dependencies = [
 dev = [
     "pytest>=8.0",
     "pytest-cov>=6.0",
+    "pytest-xdist>=3.0",
+]
+comparison = [
+    "PyJHora>=1.0",
+    "pytest-xdist>=3.0",
 ]
 docs = [
     "mkdocs-material>=9.0",

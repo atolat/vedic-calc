@@ -586,3 +586,481 @@ class Ayanamsa(IntEnum):
     RAMAN = 3               # B.V. Raman's ayanamsa
     KP = 5                  # Krishnamurti Paddhati (a sub-system of Vedic astrology)
     TRUE_CHITRAPAKSHA = 27  # True Chitrapaksha (fixes Spica at exactly 0° Libra)
+
+
+# ---------------------------------------------------------------------------
+# Planetary friendship table (Naisargika Maitri)
+# ---------------------------------------------------------------------------
+# Natural relationship between planets: 2=friend, 1=neutral, 0=enemy.
+# Source: BPHS Chapter 3.
+# Only 7 classical planets (Sun–Saturn) participate in friendships;
+# Rahu and Ketu don't own signs and are excluded.
+
+PLANET_FRIENDSHIP: dict[Planet, dict[Planet, int]] = {
+    Planet.SUN: {
+        Planet.SUN: 2, Planet.MOON: 2, Planet.MARS: 2, Planet.MERCURY: 1,
+        Planet.JUPITER: 2, Planet.VENUS: 0, Planet.SATURN: 0,
+    },
+    Planet.MOON: {
+        Planet.SUN: 2, Planet.MOON: 2, Planet.MARS: 1, Planet.MERCURY: 2,
+        Planet.JUPITER: 1, Planet.VENUS: 1, Planet.SATURN: 1,
+    },
+    Planet.MARS: {
+        Planet.SUN: 2, Planet.MOON: 2, Planet.MARS: 2, Planet.MERCURY: 0,
+        Planet.JUPITER: 2, Planet.VENUS: 1, Planet.SATURN: 0,
+    },
+    Planet.MERCURY: {
+        Planet.SUN: 2, Planet.MOON: 0, Planet.MARS: 1, Planet.MERCURY: 2,
+        Planet.JUPITER: 1, Planet.VENUS: 2, Planet.SATURN: 1,
+    },
+    Planet.JUPITER: {
+        Planet.SUN: 2, Planet.MOON: 2, Planet.MARS: 2, Planet.MERCURY: 0,
+        Planet.JUPITER: 2, Planet.VENUS: 0, Planet.SATURN: 1,
+    },
+    Planet.VENUS: {
+        Planet.SUN: 0, Planet.MOON: 1, Planet.MARS: 1, Planet.MERCURY: 2,
+        Planet.JUPITER: 1, Planet.VENUS: 2, Planet.SATURN: 2,
+    },
+    Planet.SATURN: {
+        Planet.SUN: 0, Planet.MOON: 0, Planet.MARS: 0, Planet.MERCURY: 2,
+        Planet.JUPITER: 1, Planet.VENUS: 2, Planet.SATURN: 2,
+    },
+}
+
+
+# ---------------------------------------------------------------------------
+# Exaltation and debilitation degrees
+# ---------------------------------------------------------------------------
+# Each planet has one sign+degree where it is exalted (strongest) and the
+# opposite sign+degree where it is debilitated (weakest).
+# Format: (sign, exact_degree_in_sign)
+# Source: BPHS Chapter 3, Verse 49.
+
+EXALTATION: dict[Planet, tuple["Sign", float]] = {
+    Planet.SUN: (Sign.ARIES, 10.0),
+    Planet.MOON: (Sign.TAURUS, 3.0),
+    Planet.MARS: (Sign.CAPRICORN, 28.0),
+    Planet.MERCURY: (Sign.VIRGO, 15.0),
+    Planet.JUPITER: (Sign.CANCER, 5.0),
+    Planet.VENUS: (Sign.PISCES, 27.0),
+    Planet.SATURN: (Sign.LIBRA, 20.0),
+    Planet.RAHU: (Sign.TAURUS, 20.0),
+    Planet.KETU: (Sign.SCORPIO, 20.0),
+}
+
+DEBILITATION: dict[Planet, tuple["Sign", float]] = {
+    Planet.SUN: (Sign.LIBRA, 10.0),
+    Planet.MOON: (Sign.SCORPIO, 3.0),
+    Planet.MARS: (Sign.CANCER, 28.0),
+    Planet.MERCURY: (Sign.PISCES, 15.0),
+    Planet.JUPITER: (Sign.CAPRICORN, 5.0),
+    Planet.VENUS: (Sign.VIRGO, 27.0),
+    Planet.SATURN: (Sign.ARIES, 20.0),
+    Planet.RAHU: (Sign.SCORPIO, 20.0),
+    Planet.KETU: (Sign.TAURUS, 20.0),
+}
+
+
+# ---------------------------------------------------------------------------
+# Moolatrikona signs and degree ranges
+# ---------------------------------------------------------------------------
+# Each planet has a moolatrikona range — a zone of special strength,
+# slightly less than exaltation but more than own sign.
+# Format: (sign, start_degree, end_degree)
+# Source: BPHS Chapter 3, Verse 50-51.
+
+MOOLATRIKONA: dict[Planet, tuple["Sign", float, float]] = {
+    Planet.SUN: (Sign.LEO, 0.0, 20.0),
+    Planet.MOON: (Sign.TAURUS, 3.0, 30.0),
+    Planet.MARS: (Sign.ARIES, 0.0, 12.0),
+    Planet.MERCURY: (Sign.VIRGO, 15.0, 20.0),
+    Planet.JUPITER: (Sign.SAGITTARIUS, 0.0, 10.0),
+    Planet.VENUS: (Sign.LIBRA, 0.0, 15.0),
+    Planet.SATURN: (Sign.AQUARIUS, 0.0, 20.0),
+}
+
+
+# ---------------------------------------------------------------------------
+# Combustion thresholds (degrees from Sun)
+# ---------------------------------------------------------------------------
+# A planet within this distance from the Sun is "combust" (asta) and weakened.
+# Retrograde planets have slightly different thresholds (shown as second value).
+# Format: (direct_threshold, retrograde_threshold)
+# Source: BPHS Chapter 25.
+# Sun, Rahu, Ketu are excluded (Sun is the combustor; nodes are shadow planets).
+
+COMBUSTION_THRESHOLD: dict[Planet, tuple[float, float]] = {
+    Planet.MOON: (12.0, 12.0),
+    Planet.MARS: (17.0, 17.0),
+    Planet.MERCURY: (14.0, 12.0),
+    Planet.JUPITER: (11.0, 11.0),
+    Planet.VENUS: (10.0, 8.0),
+    Planet.SATURN: (15.0, 15.0),
+}
+
+
+# ---------------------------------------------------------------------------
+# Graha Drishti (planetary aspect) rules
+# ---------------------------------------------------------------------------
+# All planets cast a full aspect on the 7th house from their position.
+# Mars, Jupiter, and Saturn have additional special aspects.
+# Values are the house offsets (1-indexed) each planet aspects.
+# Source: BPHS Chapter 26.
+
+GRAHA_DRISHTI: dict[Planet, list[int]] = {
+    Planet.SUN: [7],
+    Planet.MOON: [7],
+    Planet.MARS: [4, 7, 8],
+    Planet.MERCURY: [7],
+    Planet.JUPITER: [5, 7, 9],
+    Planet.VENUS: [7],
+    Planet.SATURN: [3, 7, 10],
+    Planet.RAHU: [5, 7, 9],
+    Planet.KETU: [5, 7, 9],
+}
+
+# Rashi Drishti (sign-based aspects for Jaimini)
+# Movable signs aspect fixed signs (except adjacent), and vice versa.
+# Dual signs aspect other dual signs.
+# Format: sign → list of signs it aspects.
+RASHI_DRISHTI: dict["Sign", list["Sign"]] = {
+    Sign.ARIES: [Sign.SCORPIO, Sign.LEO, Sign.AQUARIUS],
+    Sign.TAURUS: [Sign.LIBRA, Sign.SAGITTARIUS, Sign.AQUARIUS],
+    Sign.GEMINI: [Sign.VIRGO, Sign.SAGITTARIUS, Sign.PISCES],
+    Sign.CANCER: [Sign.AQUARIUS, Sign.SCORPIO, Sign.TAURUS],
+    Sign.LEO: [Sign.SCORPIO, Sign.TAURUS, Sign.AQUARIUS],
+    Sign.VIRGO: [Sign.GEMINI, Sign.SAGITTARIUS, Sign.PISCES],
+    Sign.LIBRA: [Sign.TAURUS, Sign.LEO, Sign.AQUARIUS],
+    Sign.SCORPIO: [Sign.LEO, Sign.ARIES, Sign.AQUARIUS],
+    Sign.SAGITTARIUS: [Sign.GEMINI, Sign.VIRGO, Sign.PISCES],
+    Sign.CAPRICORN: [Sign.ARIES, Sign.CANCER, Sign.LIBRA],
+    Sign.AQUARIUS: [Sign.CANCER, Sign.ARIES, Sign.LIBRA],
+    Sign.PISCES: [Sign.GEMINI, Sign.VIRGO, Sign.SAGITTARIUS],
+}
+
+
+# ---------------------------------------------------------------------------
+# Ashtakavarga benefic points
+# ---------------------------------------------------------------------------
+# For each planet, the houses (counted from other planets and the lagna)
+# where that planet contributes a benefic point.
+# 7 contributing planets (Sun-Saturn) + Lagna, for 7 receiver planets.
+# Source: BPHS Chapter 66-72.
+# Format: receiver_planet → {contributor → list of houses where benefic}
+
+ASHTAKAVARGA_BENEFIC: dict[Planet, dict[Planet | str, list[int]]] = {
+    Planet.SUN: {
+        Planet.SUN: [1, 2, 4, 7, 8, 9, 10, 11],
+        Planet.MOON: [3, 6, 10, 11],
+        Planet.MARS: [1, 2, 4, 7, 8, 9, 10, 11],
+        Planet.MERCURY: [3, 5, 6, 9, 10, 11, 12],
+        Planet.JUPITER: [5, 6, 9, 11],
+        Planet.VENUS: [6, 7, 12],
+        Planet.SATURN: [1, 2, 4, 7, 8, 9, 10, 11],
+        "lagna": [3, 4, 6, 10, 11, 12],
+    },
+    Planet.MOON: {
+        Planet.SUN: [3, 6, 7, 8, 10, 11],
+        Planet.MOON: [1, 3, 6, 7, 10, 11],
+        Planet.MARS: [2, 3, 5, 6, 9, 10, 11],
+        Planet.MERCURY: [1, 3, 4, 5, 7, 8, 10, 11],
+        Planet.JUPITER: [1, 4, 7, 8, 10, 11, 12],
+        Planet.VENUS: [3, 4, 5, 7, 9, 10, 11],
+        Planet.SATURN: [3, 5, 6, 11],
+        "lagna": [3, 6, 10, 11],
+    },
+    Planet.MARS: {
+        Planet.SUN: [3, 5, 6, 10, 11],
+        Planet.MOON: [3, 6, 11],
+        Planet.MARS: [1, 2, 4, 7, 8, 10, 11],
+        Planet.MERCURY: [3, 5, 6, 11],
+        Planet.JUPITER: [6, 10, 11, 12],
+        Planet.VENUS: [6, 8, 11, 12],
+        Planet.SATURN: [1, 4, 7, 8, 9, 10, 11],
+        "lagna": [1, 3, 6, 10, 11],
+    },
+    Planet.MERCURY: {
+        Planet.SUN: [5, 6, 9, 11, 12],
+        Planet.MOON: [2, 4, 6, 8, 10, 11],
+        Planet.MARS: [1, 2, 4, 7, 8, 9, 10, 11],
+        Planet.MERCURY: [1, 3, 5, 6, 9, 10, 11, 12],
+        Planet.JUPITER: [6, 8, 11, 12],
+        Planet.VENUS: [1, 2, 3, 4, 5, 8, 9, 11],
+        Planet.SATURN: [1, 2, 4, 7, 8, 9, 10, 11],
+        "lagna": [1, 2, 4, 6, 8, 10, 11],
+    },
+    Planet.JUPITER: {
+        Planet.SUN: [1, 2, 3, 4, 7, 8, 9, 10, 11],
+        Planet.MOON: [2, 5, 7, 9, 11],
+        Planet.MARS: [1, 2, 4, 7, 8, 10, 11],
+        Planet.MERCURY: [1, 2, 4, 5, 6, 9, 10, 11],
+        Planet.JUPITER: [1, 2, 3, 4, 7, 8, 10, 11],
+        Planet.VENUS: [2, 5, 6, 9, 10, 11],
+        Planet.SATURN: [3, 5, 6, 12],
+        "lagna": [1, 2, 4, 5, 6, 7, 9, 10, 11],
+    },
+    Planet.VENUS: {
+        Planet.SUN: [8, 11, 12],
+        Planet.MOON: [1, 2, 3, 4, 5, 8, 9, 11, 12],
+        Planet.MARS: [3, 4, 6, 8, 9, 11, 12],
+        Planet.MERCURY: [3, 5, 6, 9, 11],
+        Planet.JUPITER: [5, 8, 9, 10, 11],
+        Planet.VENUS: [1, 2, 3, 4, 5, 8, 9, 10, 11],
+        Planet.SATURN: [3, 4, 5, 8, 9, 10, 11],
+        "lagna": [1, 2, 3, 4, 5, 8, 9, 11],
+    },
+    Planet.SATURN: {
+        Planet.SUN: [1, 2, 4, 7, 8, 9, 10, 11],
+        Planet.MOON: [3, 6, 11],
+        Planet.MARS: [3, 5, 6, 10, 11, 12],
+        Planet.MERCURY: [6, 8, 9, 10, 11, 12],
+        Planet.JUPITER: [5, 6, 11, 12],
+        Planet.VENUS: [6, 11, 12],
+        Planet.SATURN: [3, 5, 6, 11],
+        "lagna": [1, 3, 4, 6, 10, 11],
+    },
+}
+
+
+# ---------------------------------------------------------------------------
+# Naisargika Bala (natural strength) — used in Shadbala
+# ---------------------------------------------------------------------------
+# Natural strength values in Shashtiamsas (1/60th of a Rupa).
+# Source: BPHS Chapter 27.
+NAISARGIKA_BALA: dict[Planet, float] = {
+    Planet.SUN: 60.0,
+    Planet.MOON: 51.43,
+    Planet.MARS: 17.14,
+    Planet.MERCURY: 25.71,
+    Planet.JUPITER: 34.28,
+    Planet.VENUS: 42.86,
+    Planet.SATURN: 8.57,
+}
+
+# Dig Bala (directional strength) — which house gives max strength.
+# Source: BPHS Chapter 27.
+# Format: planet → house number where it gets maximum Dig Bala.
+DIG_BALA_HOUSES: dict[Planet, int] = {
+    Planet.SUN: 10,      # Sun is strong in 10th (zenith)
+    Planet.MOON: 4,      # Moon is strong in 4th (nadir)
+    Planet.MARS: 10,     # Mars is strong in 10th
+    Planet.MERCURY: 1,   # Mercury is strong in 1st (east)
+    Planet.JUPITER: 1,   # Jupiter is strong in 1st
+    Planet.VENUS: 4,     # Venus is strong in 4th
+    Planet.SATURN: 7,    # Saturn is strong in 7th (west)
+}
+
+
+# ---------------------------------------------------------------------------
+# Choghadiya (day/night auspicious period) names
+# ---------------------------------------------------------------------------
+# 7 choghadiyas per day and 7 per night, named after planets.
+# Day sequence varies by weekday; night is the reverse.
+# Source: Muhurta Chintamani.
+
+CHOGHADIYA_TYPES: dict[str, str] = {
+    "Udyog": "good",        # Mercury — good for work
+    "Amrit": "best",        # Moon — best, auspicious
+    "Char": "good",         # Venus — good for travel
+    "Labh": "good",         # Jupiter — good for gains
+    "Shubh": "good",        # Jupiter — auspicious
+    "Rog": "bad",           # Mars — inauspicious, disease
+    "Kaal": "bad",          # Saturn — inauspicious, death
+}
+
+# Day choghadiya sequence by weekday (0=Monday to 6=Sunday)
+CHOGHADIYA_DAY_SEQUENCE: dict[int, list[str]] = {
+    0: ["Amrit", "Kaal", "Shubh", "Rog", "Udyog", "Char", "Labh", "Amrit"],
+    1: ["Rog", "Udyog", "Char", "Labh", "Amrit", "Kaal", "Shubh", "Rog"],
+    2: ["Labh", "Amrit", "Kaal", "Shubh", "Rog", "Udyog", "Char", "Labh"],
+    3: ["Shubh", "Rog", "Udyog", "Char", "Labh", "Amrit", "Kaal", "Shubh"],
+    4: ["Char", "Labh", "Amrit", "Kaal", "Shubh", "Rog", "Udyog", "Char"],
+    5: ["Kaal", "Shubh", "Rog", "Udyog", "Char", "Labh", "Amrit", "Kaal"],
+    6: ["Udyog", "Char", "Labh", "Amrit", "Kaal", "Shubh", "Rog", "Udyog"],
+}
+
+# Night choghadiya sequence by weekday
+CHOGHADIYA_NIGHT_SEQUENCE: dict[int, list[str]] = {
+    0: ["Shubh", "Amrit", "Char", "Rog", "Kaal", "Labh", "Udyog", "Shubh"],
+    1: ["Char", "Rog", "Kaal", "Labh", "Udyog", "Shubh", "Amrit", "Char"],
+    2: ["Kaal", "Labh", "Udyog", "Shubh", "Amrit", "Char", "Rog", "Kaal"],
+    3: ["Labh", "Udyog", "Shubh", "Amrit", "Char", "Rog", "Kaal", "Labh"],
+    4: ["Udyog", "Shubh", "Amrit", "Char", "Rog", "Kaal", "Labh", "Udyog"],
+    5: ["Amrit", "Char", "Rog", "Kaal", "Labh", "Udyog", "Shubh", "Amrit"],
+    6: ["Rog", "Kaal", "Labh", "Udyog", "Shubh", "Amrit", "Char", "Rog"],
+}
+
+
+# ---------------------------------------------------------------------------
+# Hora (planetary hour) lord sequence
+# ---------------------------------------------------------------------------
+# The 24 hours of a day (starting from sunrise) are ruled by planets
+# in this order, starting from the weekday lord.
+# Sunday=Sun, Monday=Moon, Tuesday=Mars, etc.
+HORA_ORDER: list[Planet] = [
+    Planet.SUN, Planet.VENUS, Planet.MERCURY, Planet.MOON,
+    Planet.SATURN, Planet.JUPITER, Planet.MARS,
+]
+
+# Weekday → starting hora lord
+WEEKDAY_HORA_LORD: dict[int, Planet] = {
+    0: Planet.MOON,      # Monday
+    1: Planet.MARS,      # Tuesday
+    2: Planet.MERCURY,   # Wednesday
+    3: Planet.JUPITER,   # Thursday
+    4: Planet.VENUS,     # Friday
+    5: Planet.SATURN,    # Saturday
+    6: Planet.SUN,       # Sunday
+}
+
+
+# ---------------------------------------------------------------------------
+# Rahu Kalam, Yamagandam, Gulika Kalam time slots
+# ---------------------------------------------------------------------------
+# These inauspicious periods are portions of the day (sunrise to sunset),
+# divided into 8 equal parts. The slot number (0-7) for each weekday:
+# Source: Traditional South Indian Panchanga.
+
+RAHU_KALAM_SLOT: dict[int, int] = {
+    0: 1,  # Monday: 2nd slot
+    1: 6,  # Tuesday: 7th slot
+    2: 4,  # Wednesday: 5th slot
+    3: 5,  # Thursday: 6th slot
+    4: 3,  # Friday: 4th slot
+    5: 2,  # Saturday: 3rd slot
+    6: 7,  # Sunday: 8th slot
+}
+
+YAMAGANDAM_SLOT: dict[int, int] = {
+    0: 3,  # Monday: 4th slot
+    1: 2,  # Tuesday: 3rd slot
+    2: 1,  # Wednesday: 2nd slot
+    3: 0,  # Thursday: 1st slot
+    4: 6,  # Friday: 7th slot
+    5: 5,  # Saturday: 6th slot
+    6: 4,  # Sunday: 5th slot
+}
+
+GULIKA_KALAM_SLOT: dict[int, int] = {
+    0: 5,  # Monday: 6th slot
+    1: 4,  # Tuesday: 5th slot
+    2: 3,  # Wednesday: 4th slot
+    3: 2,  # Thursday: 3rd slot
+    4: 1,  # Friday: 2nd slot
+    5: 0,  # Saturday: 1st slot
+    6: 6,  # Sunday: 7th slot
+}
+
+
+# ---------------------------------------------------------------------------
+# Saham (Arabic Parts / Sensitive Points) formulas
+# ---------------------------------------------------------------------------
+# Each saham is computed as: A + B - C (modulo 360°).
+# For day birth (Sun above horizon): use the formula as-is.
+# For night birth: swap A and B.
+# Format: (name, planet_A, planet_B, planet_C) where values are Planet enums
+# or "ASC" for ascendant longitude.
+# Source: Brihat Jataka, Jataka Parijata.
+
+SAHAM_FORMULAS: list[tuple[str, str, str, str]] = [
+    ("Punya", "MOON", "SUN", "ASC"),          # Spiritual merit
+    ("Vidya", "SUN", "MOON", "ASC"),           # Education
+    ("Yasas", "JUPITER", "MOON", "ASC"),       # Fame
+    ("Mitra", "JUPITER", "MOON", "ASC"),       # Friendship
+    ("Mahatmya", "SUN", "MARS", "ASC"),        # Greatness
+    ("Sastra", "JUPITER", "SATURN", "ASC"),    # Weapons/scriptures
+    ("Gaurava", "JUPITER", "MOON", "SUN"),     # Respect
+    ("Pitri", "SATURN", "SUN", "ASC"),         # Father
+    ("Matri", "MOON", "VENUS", "ASC"),         # Mother
+    ("Putra", "JUPITER", "MOON", "ASC"),       # Children
+    ("Jeeva", "SATURN", "JUPITER", "ASC"),     # Vitality
+    ("Karma", "MARS", "MERCURY", "ASC"),       # Profession
+    ("Roga", "ASC", "MARS", "SATURN"),         # Disease
+    ("Kali", "JUPITER", "MARS", "ASC"),        # Strife
+    ("Paradesa", "ASC", "SUN", "SATURN"),      # Foreign travel
+    ("Vivaha", "VENUS", "SATURN", "ASC"),      # Marriage
+    ("Santapa", "SATURN", "MOON", "ASC"),      # Sorrow
+    ("Apamrityu", "MARS", "SATURN", "ASC"),    # Accidental death
+    ("Paradara", "VENUS", "SUN", "ASC"),       # Adultery (partner's fidelity)
+    ("Bandhana", "SATURN", "MOON", "MERCURY"), # Imprisonment
+]
+
+
+# ---------------------------------------------------------------------------
+# Yogini Dasha constants
+# ---------------------------------------------------------------------------
+# 8 yoginis, each ruled by a planet, with fixed year durations.
+# Total cycle: 36 years. Sequence determined by birth nakshatra.
+# Source: Jataka Parijata.
+
+YOGINI_DASHA_YEARS: dict[str, tuple[Planet, int]] = {
+    "Mangala": (Planet.MOON, 1),
+    "Pingala": (Planet.SUN, 2),
+    "Dhanya": (Planet.JUPITER, 3),
+    "Bhramari": (Planet.MARS, 4),
+    "Bhadrika": (Planet.MERCURY, 5),
+    "Ulka": (Planet.SATURN, 6),
+    "Siddha": (Planet.VENUS, 7),
+    "Sankata": (Planet.RAHU, 8),
+}
+
+YOGINI_DASHA_ORDER: list[str] = [
+    "Mangala", "Pingala", "Dhanya", "Bhramari",
+    "Bhadrika", "Ulka", "Siddha", "Sankata",
+]
+
+YOGINI_DASHA_TOTAL_YEARS: int = 36
+
+
+# ---------------------------------------------------------------------------
+# Ashtottari Dasha constants
+# ---------------------------------------------------------------------------
+# 8 planets (no Ketu), 108-year cycle.
+# Source: BPHS Chapter 47.
+
+ASHTOTTARI_YEARS: dict[Planet, int] = {
+    Planet.SUN: 6,
+    Planet.MOON: 15,
+    Planet.MARS: 8,
+    Planet.MERCURY: 17,
+    Planet.SATURN: 10,
+    Planet.JUPITER: 19,
+    Planet.RAHU: 12,
+    Planet.VENUS: 21,
+}
+
+ASHTOTTARI_ORDER: list[Planet] = [
+    Planet.SUN, Planet.MOON, Planet.MARS, Planet.MERCURY,
+    Planet.SATURN, Planet.JUPITER, Planet.RAHU, Planet.VENUS,
+]
+
+ASHTOTTARI_TOTAL_YEARS: int = 108
+
+
+# ---------------------------------------------------------------------------
+# Chara Karaka order
+# ---------------------------------------------------------------------------
+# Jaimini's 8 chara (variable) karakas, ordered by decreasing longitude
+# within sign. The planet with the highest degree_in_sign = Atmakaraka, etc.
+# Source: Jaimini Sutras.
+
+CHARA_KARAKA_NAMES: list[str] = [
+    "Atmakaraka",       # Self, soul
+    "Amatyakaraka",     # Minister, career
+    "Bhratrikaraka",    # Siblings
+    "Matrikaraka",      # Mother
+    "Putrakaraka",      # Children
+    "Gnatikaraka",      # Relatives, diseases
+    "Darakaraka",       # Spouse
+    "Pitrkaraka",       # Father (8-karaka scheme only)
+]
+
+
+# ---------------------------------------------------------------------------
+# House categories
+# ---------------------------------------------------------------------------
+KENDRA_HOUSES: list[int] = [1, 4, 7, 10]        # Angular houses
+TRIKONA_HOUSES: list[int] = [1, 5, 9]            # Trinal houses
+DUSTHANA_HOUSES: list[int] = [6, 8, 12]          # Malefic houses
+UPACHAYA_HOUSES: list[int] = [3, 6, 10, 11]      # Growth houses
+MARAKA_HOUSES: list[int] = [2, 7]                # Death-inflicting houses

@@ -1,1 +1,1 @@
-"""Birth chart calculation module."""
+"""Birth chart calculation, divisional charts, aspects, and related modules."""

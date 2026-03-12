@@ -329,3 +329,376 @@ class PanchangaInfo(BaseModel, frozen=True):
     karana_name: str
     sunrise: datetime | None = None
     sunset: datetime | None = None
+
+
+# ---------------------------------------------------------------------------
+# Divisional chart types
+# ---------------------------------------------------------------------------
+
+class DivisionalChart(BaseModel, frozen=True):
+    """A divisional chart (Varga) showing planet-to-sign mapping.
+
+    Divisional charts are derived from the D1 (Rasi) chart by dividing
+    each sign into sub-divisions and mapping the planet's position to
+    a new sign based on formulas specific to each division.
+
+    Common divisions: D9 (Navamsa), D2 (Hora), D3 (Drekkana), D10 (Dasamsa).
+
+    Attributes:
+        division: The varga number (e.g., 9 for Navamsa).
+        name: Human-readable name (e.g., "Navamsa").
+        planets: Mapping of each planet to its sign in this divisional chart.
+        ascendant_sign: The ascendant sign in this divisional chart.
+    """
+    division: int = Field(ge=1, le=60)
+    name: str
+    planets: dict[Planet, Sign]
+    ascendant_sign: Sign
+
+
+class AspectInfo(BaseModel, frozen=True):
+    """Information about a planetary aspect (Graha Drishti).
+
+    In Vedic astrology, planets "aspect" (cast influence on) other
+    planets and houses. All planets aspect the 7th house from them;
+    Mars, Jupiter, and Saturn have additional special aspects.
+
+    Attributes:
+        aspecting_planet: The planet casting the aspect.
+        aspected_planet: The planet receiving the aspect (None if empty house).
+        aspected_house: The house number being aspected (1-12).
+        aspect_type: "full", "three_quarter", "half", or "quarter".
+        is_special: Whether this is a special aspect (not the universal 7th).
+    """
+    aspecting_planet: Planet
+    aspected_planet: Planet | None = None
+    aspected_house: int = Field(ge=1, le=12)
+    aspect_type: str = "full"
+    is_special: bool = False
+
+
+class CombustionStatus(BaseModel, frozen=True):
+    """Whether a planet is combust (too close to the Sun).
+
+    A combust planet is weakened — its significations suffer.
+    The threshold varies per planet (e.g., Moon=12°, Jupiter=11°).
+
+    Attributes:
+        planet: The planet being checked.
+        is_combust: Whether the planet is within the combustion threshold.
+        distance_from_sun: Angular distance from the Sun in degrees.
+        threshold: The combustion threshold used (depends on retro status).
+    """
+    planet: Planet
+    is_combust: bool
+    distance_from_sun: float
+    threshold: float
+
+
+class PlanetState(BaseModel, frozen=True):
+    """Comprehensive state/dignity of a planet in a chart.
+
+    Combines multiple assessments: dignity (own sign, exalted, etc.),
+    combustion, retrograde status, and vargottama status.
+
+    Attributes:
+        planet: The planet.
+        dignity: One of "exalted", "moolatrikona", "own_sign", "friend",
+                 "neutral", "enemy", "debilitated".
+        is_combust: Whether the planet is combust.
+        is_retrograde: Whether the planet is retrograde.
+        is_vargottama: Whether the planet is in the same sign in D1 and D9.
+        sign: The sign the planet occupies in D1.
+        sign_lord: The lord of the sign the planet occupies.
+    """
+    planet: Planet
+    dignity: str
+    is_combust: bool
+    is_retrograde: bool
+    is_vargottama: bool
+    sign: Sign
+    sign_lord: Planet
+
+
+class TransitChart(BaseModel, frozen=True):
+    """Planetary positions for an arbitrary date/time (transit chart).
+
+    Unlike a BirthChart, this has no birth metadata — it's a snapshot
+    of the sky at any moment, used for transit analysis.
+
+    Attributes:
+        date: The date/time of the transit.
+        planets: Positions of all 9 planets.
+        ayanamsa: Which ayanamsa system was used.
+        ayanamsa_degrees: The ayanamsa value in degrees.
+    """
+    date: datetime
+    planets: dict[Planet, PlanetPosition]
+    ayanamsa: Ayanamsa
+    ayanamsa_degrees: float
+
+
+class HouseAnalysis(BaseModel, frozen=True):
+    """Detailed analysis of a single house in the birth chart.
+
+    Attributes:
+        house_number: House number (1-12).
+        sign: The zodiac sign occupying this house.
+        lord: The planet ruling this house's sign.
+        lord_sign: The sign where the house lord is placed.
+        lord_house: The house number where the house lord is placed.
+        occupants: Planets occupying this house.
+        aspected_by: Planets aspecting this house.
+        category: House category — "kendra", "trikona", "dusthana",
+                  "upachaya", "maraka", or "neutral".
+    """
+    house_number: int = Field(ge=1, le=12)
+    sign: Sign
+    lord: Planet
+    lord_sign: Sign
+    lord_house: int = Field(ge=1, le=12)
+    occupants: list[Planet]
+    aspected_by: list[Planet]
+    category: str
+
+
+# ---------------------------------------------------------------------------
+# Yoga and Dosha types
+# ---------------------------------------------------------------------------
+
+class YogaResult(BaseModel, frozen=True):
+    """Result of a yoga (auspicious/inauspicious combination) check.
+
+    Yogas are specific planetary combinations that indicate particular
+    life themes or events. They are deterministic — either present or not.
+
+    Attributes:
+        name: Yoga name (e.g., "Gajakesari", "Ruchaka").
+        category: Category (e.g., "pancha_mahapurusha", "dhana", "raja").
+        involved_planets: Planets that form this yoga.
+        description: Brief description of the yoga's significance.
+        is_present: Whether this yoga is formed in the chart.
+    """
+    name: str
+    category: str
+    involved_planets: list[Planet]
+    description: str
+    is_present: bool
+
+
+class DoshaResult(BaseModel, frozen=True):
+    """Result of a dosha (affliction) check.
+
+    Doshas are problematic planetary configurations. Some have
+    cancellation conditions (dosha bhanga).
+
+    Attributes:
+        name: Dosha name (e.g., "Manglik", "Kaal Sarpa").
+        is_present: Whether this dosha is present in the chart.
+        severity: "none", "mild", "moderate", or "severe".
+        cancellation_factors: Reasons why the dosha may be cancelled.
+        description: Brief description.
+    """
+    name: str
+    is_present: bool
+    severity: str
+    cancellation_factors: list[str]
+    description: str
+
+
+# ---------------------------------------------------------------------------
+# Muhurta types
+# ---------------------------------------------------------------------------
+
+class MuhurtaInfo(BaseModel, frozen=True):
+    """Muhurta (electional astrology) information for a given date.
+
+    Contains auspicious/inauspicious time periods for the day.
+
+    Attributes:
+        date: The date.
+        rahu_kalam: Tuple of (start, end) datetimes for Rahu Kalam.
+        yamagandam: Tuple of (start, end) datetimes for Yamagandam.
+        gulika_kalam: Tuple of (start, end) datetimes for Gulika Kalam.
+        abhijit_muhurta: Tuple of (start, end) for Abhijit Muhurta (midday auspicious).
+        choghadiya_day: List of (name, start, end, quality) for daytime periods.
+        choghadiya_night: List of (name, start, end, quality) for nighttime periods.
+        hora: Current planetary hour lord at sunrise.
+    """
+    date: datetime
+    rahu_kalam: tuple[datetime, datetime]
+    yamagandam: tuple[datetime, datetime]
+    gulika_kalam: tuple[datetime, datetime]
+    abhijit_muhurta: tuple[datetime, datetime]
+    choghadiya_day: list[tuple[str, datetime, datetime, str]]
+    choghadiya_night: list[tuple[str, datetime, datetime, str]]
+    hora: Planet
+
+
+# ---------------------------------------------------------------------------
+# Upagraha and Special Lagna types
+# ---------------------------------------------------------------------------
+
+class UpagrahaPosition(BaseModel, frozen=True):
+    """Position of an upagraha (sub-planet).
+
+    Upagrahas are mathematically derived points (not physical bodies).
+
+    Attributes:
+        name: Upagraha name (e.g., "Dhuma", "Gulika", "Mandi").
+        longitude: Sidereal longitude (0-360).
+        sign: Zodiac sign.
+        degree_in_sign: Degree within the sign (0-30).
+    """
+    name: str
+    longitude: float = Field(ge=0.0, lt=360.0)
+    sign: Sign
+    degree_in_sign: float = Field(ge=0.0, lt=30.0)
+
+
+class SpecialLagna(BaseModel, frozen=True):
+    """A special lagna (ascendant variant).
+
+    Attributes:
+        name: Lagna name (e.g., "Bhava Lagna", "Hora Lagna").
+        longitude: Sidereal longitude (0-360).
+        sign: Zodiac sign.
+        degree_in_sign: Degree within the sign (0-30).
+    """
+    name: str
+    longitude: float = Field(ge=0.0, lt=360.0)
+    sign: Sign
+    degree_in_sign: float = Field(ge=0.0, lt=30.0)
+
+
+# ---------------------------------------------------------------------------
+# Jaimini types
+# ---------------------------------------------------------------------------
+
+class CharaKaraka(BaseModel, frozen=True):
+    """A Jaimini chara (variable) karaka.
+
+    Attributes:
+        karaka_name: Karaka name (e.g., "Atmakaraka").
+        planet: The planet assigned this karaka role.
+        degree_in_sign: The planet's degree within its sign (used for ranking).
+    """
+    karaka_name: str
+    planet: Planet
+    degree_in_sign: float
+
+
+class ArudhaPada(BaseModel, frozen=True):
+    """An Arudha Pada (Jaimini concept).
+
+    Attributes:
+        house_number: The original house (1-12).
+        sign: The sign of the Arudha Pada.
+        pada_name: Name (e.g., "Arudha Lagna (AL)" for house 1).
+    """
+    house_number: int = Field(ge=1, le=12)
+    sign: Sign
+    pada_name: str
+
+
+# ---------------------------------------------------------------------------
+# Strength types
+# ---------------------------------------------------------------------------
+
+class AshtakavargaResult(BaseModel, frozen=True):
+    """Result of Ashtakavarga calculation.
+
+    Bhinnashtakavarga: Individual benefic point tables for each planet.
+    Sarvashtakavarga: Combined points across all planets.
+
+    Attributes:
+        bhinna: For each planet, list of 12 ints (benefic points per sign, 0-8).
+        sarva: List of 12 ints (total benefic points per sign, 0-56).
+    """
+    bhinna: dict[Planet, list[int]]
+    sarva: list[int]
+
+
+class ShadbalaResult(BaseModel, frozen=True):
+    """Six-fold strength (Shadbala) result for a planet.
+
+    Attributes:
+        planet: The planet.
+        sthana_bala: Positional strength (in Shashtiamsas).
+        dig_bala: Directional strength.
+        kaala_bala: Temporal strength.
+        chesta_bala: Motional strength.
+        naisargika_bala: Natural strength.
+        drik_bala: Aspectual strength.
+        total: Sum of all six components.
+        is_strong: Whether total exceeds the required minimum.
+    """
+    planet: Planet
+    sthana_bala: float
+    dig_bala: float
+    kaala_bala: float
+    chesta_bala: float
+    naisargika_bala: float
+    drik_bala: float
+    total: float
+    is_strong: bool
+
+
+# ---------------------------------------------------------------------------
+# Compatibility extension types
+# ---------------------------------------------------------------------------
+
+class PoruthamFactor(BaseModel, frozen=True):
+    """A single South Indian compatibility factor."""
+    name: str
+    matched: bool
+    score: float
+    max_score: float
+    description: str = ""
+
+
+class PoruthamResult(BaseModel, frozen=True):
+    """South Indian 10-factor compatibility result.
+
+    Attributes:
+        factors: List of 10 PoruthamFactor results.
+        matched_count: How many factors matched.
+        total_factors: Total factors (10).
+    """
+    factors: list[PoruthamFactor]
+    matched_count: int
+    total_factors: int = 10
+
+
+# ---------------------------------------------------------------------------
+# Saham and Festival types
+# ---------------------------------------------------------------------------
+
+class SahamPosition(BaseModel, frozen=True):
+    """Position of a Saham (Arabic Part / Sensitive Point).
+
+    Attributes:
+        name: Saham name (e.g., "Punya Saham").
+        longitude: Sidereal longitude (0-360).
+        sign: Zodiac sign.
+        degree_in_sign: Degree within the sign (0-30).
+    """
+    name: str
+    longitude: float = Field(ge=0.0, lt=360.0)
+    sign: Sign
+    degree_in_sign: float = Field(ge=0.0, lt=30.0)
+
+
+class FestivalInfo(BaseModel, frozen=True):
+    """Information about a Hindu festival or astronomical event.
+
+    Attributes:
+        name: Festival name.
+        date: Date of the festival.
+        festival_type: Type (e.g., "major", "minor", "astronomical").
+        description: Brief description.
+    """
+    name: str
+    date: datetime
+    festival_type: str
+    description: str

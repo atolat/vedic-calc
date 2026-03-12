@@ -1,0 +1,1 @@
+"""Dosha (affliction) detection module."""

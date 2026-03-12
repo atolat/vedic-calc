@@ -7,6 +7,8 @@ on:
     paths:
       - 'docs/**'
       - 'mkdocs.yml'
+      - 'src/**'
+      - 'tests/comparison/**'
 
 # Allow only one concurrent deployment
 concurrency:
@@ -30,8 +32,43 @@ jobs:
       - name: Set up Python
         run: uv python install 3.13
 
-      - name: Install docs dependencies
-        run: uv sync --extra docs --python 3.13
+      - name: Install dependencies
+        run: uv sync --extra docs --extra dev --python 3.13
+
+      - name: Run comparison tests & generate report
+        continue-on-error: true
+        run: |
+          uv sync --extra comparison --python 3.13 || true
+          uv run --python 3.13 pytest tests/comparison/ -v --tb=short || true
+
+      - name: Inject comparison report into docs
+        run: |
+          if [ -f reports/comparison_report.md ]; then
+            # Extract report content (skip the H1 title line since the docs page has its own)
+            REPORT_CONTENT=$(tail -n +2 reports/comparison_report.md)
+            # Replace the placeholder block in comparison.md
+            python3 -c "
+          import re
+          with open('docs/comparison.md', 'r') as f:
+              content = f.read()
+          report = open('reports/comparison_report.md').read()
+          # Remove H1 from report (docs page has its own)
+          report_lines = report.split('\n')
+          report_body = '\n'.join(report_lines[1:])
+          replacement = '<!-- COMPARISON_REPORT_START -->\n' + report_body + '\n<!-- COMPARISON_REPORT_END -->'
+          content = re.sub(
+              r'<!-- COMPARISON_REPORT_START -->.*?<!-- COMPARISON_REPORT_END -->',
+              replacement,
+              content,
+              flags=re.DOTALL
+          )
+          with open('docs/comparison.md', 'w') as f:
+              f.write(content)
+          "
+            echo "Comparison report injected into docs"
+          else
+            echo "No comparison report found, using placeholder"
+          fi
 
       - name: Build docs
         run: uv run --python 3.13 mkdocs build --strict
