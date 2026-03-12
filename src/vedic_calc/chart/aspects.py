@@ -15,8 +15,9 @@ HOW ASPECTS WORK:
        This wraps correctly around the 12-house cycle.
     4. Check if any planets occupy the aspected house.
     5. The 7th-house aspect is the universal aspect (is_special=False).
-       All other offsets (Mars 4th/8th, Jupiter 5th/9th, Saturn 3rd/10th,
-       Rahu/Ketu 5th/9th) are special aspects (is_special=True).
+       All other offsets (Mars 4th/8th, Jupiter 5th/9th, Saturn 3rd/10th)
+       are special aspects (is_special=True).
+       Rahu/Ketu: only the universal 7th aspect per BPHS (no special aspects).
 
 SOURCE REFERENCES:
     - BPHS Ch. 26-28: Graha Drishti (planetary aspects)

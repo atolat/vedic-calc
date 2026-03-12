@@ -40,18 +40,20 @@ jhora = pytest.importorskip("jhora", reason="PyJHora not installed")
 # ---------------------------------------------------------------------------
 # Mapping between PyJHora chart_1d planet IDs and vedic-calc Planet enum
 # ---------------------------------------------------------------------------
-# In chart_1d: '0'=Sun, '1'=Moon, '2'=Mercury, '3'=Venus, '4'=Mars,
-#              '5'=Jupiter, '6'=Saturn, '7'=Rahu, '8'=Ketu
+# graha_drishti_from_chart returns results keyed by planet_list index:
+#   planet_list = ['Sun','Moon','Mars','Mercury','Jupiter','Venus','Saturn','Rahu','Ketu']
+# So: 0=Sun, 1=Moon, 2=Mars, 3=Mercury, 4=Jupiter, 5=Venus, 6=Saturn, 7=Rahu, 8=Ketu
 # vedic-calc:  SUN=0, MOON=1, MARS=2, MERCURY=3, JUPITER=4, VENUS=5,
 #              SATURN=6, RAHU=7, KETU=8
+# The mapping is identity (same order).
 
 _PJ_CHART1D_TO_VC_PLANET = {
     0: Planet.SUN,
     1: Planet.MOON,
-    2: Planet.MERCURY,
-    3: Planet.VENUS,
-    4: Planet.MARS,
-    5: Planet.JUPITER,
+    2: Planet.MARS,
+    3: Planet.MERCURY,
+    4: Planet.JUPITER,
+    5: Planet.VENUS,
     6: Planet.SATURN,
     7: Planet.RAHU,
     8: Planet.KETU,

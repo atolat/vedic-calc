@@ -101,48 +101,43 @@ def pj_setup(ref: "ReferenceChart"):
 def pj_build_chart_1d(jd, place):
     """Build PyJHora chart_1d (list of 12 strings) from planet positions.
 
-    IMPORTANT: jd from pj_setup is in local time. sidereal_longitude expects UTC.
-    Convert using place.timezone (hours offset).
+    Uses PyJHora's own dhasavarga() to compute D1 planet positions, ensuring
+    planet sign placements and planet ID numbering are identical to what
+    PyJHora uses internally.  dhasavarga() handles JD local-to-UTC conversion.
+
+    Planet IDs in the returned chart_1d follow PyJHora's dhasavarga indexing:
+    0=Sun, 1=Moon, 2=Mars, 3=Mercury, 4=Jupiter, 5=Venus, 6=Saturn, 7=Rahu, 8=Ketu.
+    'L' marks the ascendant (Lagna).
+
+    IMPORTANT: We build chart_1d manually from dhasavarga output, including
+    only planets 0-8 (not Lagna=9, Uranus=10, Neptune=11).  PyJHora's
+    get_planet_to_house_dict_from_chart uses substring matching (``str(p) in s``)
+    which causes planet 0 to match '10' and planet 1 to match '10'/'11',
+    corrupting the position dict when multi-digit IDs are present.
     """
     from jhora.panchanga import drik
-    from jhora import const
 
-    jd_utc = jd - place.timezone / 24.0
+    # dhasavarga returns [(pid, (sign, deg)), ...] for planets 0-11
+    # We only use 0-8 (Sun-Ketu) to avoid multi-digit ID parsing issues.
+    d1 = drik.dhasavarga(jd, place, 1)
 
-    chart_1d = ["" for _ in range(12)]
-
-    # Ascendant — uses (jd_utc, place) like drik.ascendant does internally
-    asc = drik.ascendant(jd, place)
-    asc_sign = asc[0]
-    if chart_1d[asc_sign]:
-        chart_1d[asc_sign] += "/L"
-    else:
-        chart_1d[asc_sign] = "L"
-
-    # Planets 0-6 (Sun through Saturn)
-    for pid in range(7):
-        lon = drik.sidereal_longitude(jd_utc, pid)
-        sign = int(lon / 30)
+    # Build chart_1d manually: 12 sign slots, only planets 0-8
+    chart_1d = [""] * 12
+    for pid, (sign, _deg) in d1:
+        if pid > 8:  # Skip Lagna(9), Uranus(10), Neptune(11)
+            continue
         if chart_1d[sign]:
             chart_1d[sign] += "/" + str(pid)
         else:
             chart_1d[sign] = str(pid)
 
-    # Rahu
-    rahu_lon = drik.sidereal_longitude(jd_utc, const._RAHU)
-    rahu_sign = int(rahu_lon / 30)
-    if chart_1d[rahu_sign]:
-        chart_1d[rahu_sign] += "/7"
+    # Add ascendant
+    asc = drik.ascendant(jd, place)
+    asc_sign = asc[0]
+    if chart_1d[asc_sign]:
+        chart_1d[asc_sign] = "L/" + chart_1d[asc_sign]
     else:
-        chart_1d[rahu_sign] = "7"
-
-    # Ketu (Rahu + 180°, since _KETU=-10 is not a valid swe planet ID)
-    ketu_lon = (rahu_lon + 180.0) % 360.0
-    ketu_sign = int(ketu_lon / 30)
-    if chart_1d[ketu_sign]:
-        chart_1d[ketu_sign] += "/8"
-    else:
-        chart_1d[ketu_sign] = "8"
+        chart_1d[asc_sign] = "L"
 
     return chart_1d
 

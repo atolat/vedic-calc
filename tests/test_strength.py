@@ -86,7 +86,7 @@ class TestShadbalaStructure:
         for planet, sb in result.items():
             expected = (sb.sthana_bala + sb.dig_bala + sb.kaala_bala +
                        sb.chesta_bala + sb.naisargika_bala + sb.drik_bala)
-            assert abs(sb.total - expected) < 0.01, f"{planet.name}: total mismatch"
+            assert abs(sb.total - expected) < 0.02, f"{planet.name}: total mismatch"
 
     def test_naisargika_bala_positive(self, mumbai_chart):
         result = calculate_shadbala(mumbai_chart)

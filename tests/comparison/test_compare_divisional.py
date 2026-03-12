@@ -107,11 +107,13 @@ def test_divisional_chart_signs(ref, division, collector):
         4: 5,    # Jupiter → swe JUPITER=5
         5: 3,    # Venus → swe VENUS=3
         6: 6,    # Saturn
-        7: const._RAHU,   # Rahu (11)
+        7: 10,   # Rahu — use Mean Node (SWE 10) to match vedic-calc
         # Ketu computed from Rahu below
     }
     # Get Rahu longitude first (needed for Ketu)
-    rahu_lon = drik.sidereal_longitude(jd_utc, const._RAHU)
+    # Use Mean Node (SWE 10) since vedic-calc uses Mean Node.
+    # PyJHora's const._RAHU=11 is True Node, which differs by ~1-2°.
+    rahu_lon = drik.sidereal_longitude(jd_utc, 10)
 
     for vc_planet_val in _PLANET_NAMES:
         if vc_planet_val.value == 8:  # Ketu = Rahu + 180°

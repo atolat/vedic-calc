@@ -14,12 +14,21 @@ THE ASHTOTTARI DASHA SYSTEM:
     Paksha (waning Moon) or nighttime in Shukla Paksha (waxing Moon).
 
 HOW THE STARTING PLANET IS DETERMINED:
-    Each of the 27 nakshatras is assigned to one of the 8 Ashtottari planets.
-    Starting from Ardra (nakshatra 6), the nakshatras cycle through the 8
-    planets in groups, repeating every 8 nakshatras:
-        Ardra(6)→Sun, Punarvasu(7)→Moon, Pushya(8)→Mars, ...
+    The 27 nakshatras are divided into 8 uneven groups (some lords rule 4
+    nakshatras, others rule 3), starting from Ardra (nakshatra 6):
 
-    The Moon's birth nakshatra determines the starting lord.
+        Sun:     Ardra(6)  – Ashlesha(9)        [4 nakshatras]
+        Moon:    Magha(10) – UttaraPhalguni(12)  [3 nakshatras]
+        Mars:    Hasta(13) – Vishakha(16)        [4 nakshatras]
+        Mercury: Anuradha(17) – Moola(19)        [3 nakshatras]
+        Saturn:  PurvaAshadha(20) – Shravana(22) [3 nakshatras]
+        Jupiter: Dhanishta(23) – PurvaBhadra(25) [3 nakshatras]
+        Rahu:    UttaraBhadra(26) – Bharani(2)   [4 nakshatras, wraps]
+        Venus:   Krittika(3) – Mrigashira(5)     [3 nakshatras]
+
+    The Moon's birth nakshatra determines the starting lord.  The elapsed
+    fraction is computed over the lord's entire nakshatra range (not just
+    the single nakshatra the Moon occupies).
 
 SOURCE: BPHS Chapter 46, various Jyotish texts on conditional dasha systems.
 """
@@ -61,43 +70,71 @@ ASHTOTTARI_ORDER: list[Planet] = [
 # Total cycle length.
 ASHTOTTARI_TOTAL_YEARS: int = 108
 
-# Nakshatra-to-lord mapping for Ashtottari.
-# Starting from Ardra (6), nakshatras cycle through the 8 planets.
-# The pattern repeats every 8 nakshatras from Ardra onward, wrapping
-# around through all 27 nakshatras.
-_ASHTOTTARI_NAK_LORD: dict[Nakshatra, Planet] = {
-    Nakshatra.ARDRA: Planet.SUN,
-    Nakshatra.PUNARVASU: Planet.MOON,
-    Nakshatra.PUSHYA: Planet.MARS,
-    Nakshatra.ASHLESHA: Planet.MERCURY,
-    Nakshatra.MAGHA: Planet.SATURN,
-    Nakshatra.PURVA_PHALGUNI: Planet.JUPITER,
-    Nakshatra.UTTARA_PHALGUNI: Planet.RAHU,
-    Nakshatra.HASTA: Planet.VENUS,
-    Nakshatra.CHITRA: Planet.SUN,
-    Nakshatra.SWATI: Planet.MOON,
-    Nakshatra.VISHAKHA: Planet.MARS,
-    Nakshatra.ANURADHA: Planet.MERCURY,
-    Nakshatra.JYESHTHA: Planet.SATURN,
-    Nakshatra.MOOLA: Planet.JUPITER,
-    Nakshatra.PURVA_ASHADHA: Planet.RAHU,
-    Nakshatra.UTTARA_ASHADHA: Planet.VENUS,
-    Nakshatra.SHRAVANA: Planet.SUN,
-    Nakshatra.DHANISHTA: Planet.MOON,
-    Nakshatra.SHATABHISHA: Planet.MARS,
-    Nakshatra.PURVA_BHADRAPADA: Planet.MERCURY,
-    Nakshatra.UTTARA_BHADRAPADA: Planet.SATURN,
-    Nakshatra.REVATI: Planet.JUPITER,
-    Nakshatra.ASHWINI: Planet.RAHU,
-    Nakshatra.BHARANI: Planet.VENUS,
-    Nakshatra.KRITTIKA: Planet.SUN,
-    Nakshatra.ROHINI: Planet.MOON,
-    Nakshatra.MRIGASHIRA: Planet.MARS,
-}
+# Nakshatra ranges for each Ashtottari lord.
+# Each entry is (start_nakshatra, end_nakshatra) — inclusive, 1-based.
+# When end < start, the range wraps around past nakshatra 27 to 1.
+_ASHTOTTARI_RANGES: list[tuple[Planet, int, int]] = [
+    (Planet.SUN, 6, 9),
+    (Planet.MOON, 10, 12),
+    (Planet.MARS, 13, 16),
+    (Planet.MERCURY, 17, 19),
+    (Planet.SATURN, 20, 22),
+    (Planet.JUPITER, 23, 25),
+    (Planet.RAHU, 26, 2),       # wraps: 26, 27, 1, 2
+    (Planet.VENUS, 3, 5),
+]
 
 
 # Number of days per year used for dasha date arithmetic.
 _DAYS_PER_YEAR = 365.25
+
+
+def _find_lord_and_elapsed(
+    nakshatra_num: int,
+    degree_in_nakshatra: float,
+) -> tuple[Planet, float]:
+    """Find the Ashtottari lord and elapsed fraction for a given nakshatra.
+
+    The elapsed fraction is computed over the lord's entire multi-nakshatra
+    range — not just the single nakshatra.
+
+    Args:
+        nakshatra_num: Nakshatra number (1-27).
+        degree_in_nakshatra: Moon's degree within the nakshatra (0 to ~13.333).
+
+    Returns:
+        (lord, elapsed_fraction) where elapsed_fraction is in [0, 1).
+    """
+    for lord, start, end in _ASHTOTTARI_RANGES:
+        # How many nakshatras in this range (handles wrapping)
+        if end >= start:
+            count = end - start + 1
+            in_range = start <= nakshatra_num <= end
+        else:
+            # Wraps around: e.g. 26..2 means 26,27,1,2
+            count = (27 - start + 1) + end
+            in_range = nakshatra_num >= start or nakshatra_num <= end
+
+        if in_range:
+            # How many whole nakshatras before the current one in this range
+            if end >= start:
+                offset_naks = nakshatra_num - start
+            else:
+                if nakshatra_num >= start:
+                    offset_naks = nakshatra_num - start
+                else:
+                    offset_naks = (27 - start) + nakshatra_num
+
+            # Total span in degrees for this lord's range
+            total_span = count * NAKSHATRA_SPAN
+            # Degrees elapsed = whole nakshatras before + partial current
+            degrees_elapsed = offset_naks * NAKSHATRA_SPAN + degree_in_nakshatra
+            elapsed_fraction = degrees_elapsed / total_span
+
+            return lord, elapsed_fraction
+
+    # Should never reach here for valid nakshatras 1-27
+    raise ValueError(f"Nakshatra {nakshatra_num} not found in Ashtottari ranges")
 
 
 def _get_dasha_sequence(starting_lord: Planet) -> list[Planet]:
@@ -136,8 +173,8 @@ def calculate_ashtottari_dasha(
 
     CALCULATION STEPS:
         1. Get Moon's nakshatra info from the birth chart
-        2. Look up the starting lord from the Ashtottari nakshatra mapping
-        3. Calculate elapsed fraction of the first mahadasha
+        2. Look up the starting lord from Ashtottari nakshatra ranges
+        3. Calculate elapsed fraction over the lord's full nakshatra span
         4. Generate the 8 mahadasha periods (108 years total)
         5. Optionally subdivide each into antardashas
 
@@ -163,11 +200,11 @@ def calculate_ashtottari_dasha(
     moon = chart.planets[Planet.MOON]
     nak_info = moon.nakshatra_info
 
-    # --- Step 2: Determine starting lord from Ashtottari mapping ---
-    starting_lord = _ASHTOTTARI_NAK_LORD[nak_info.nakshatra]
-
-    # --- Step 3: Calculate elapsed fraction of the first dasha ---
-    elapsed_fraction = nak_info.degree_in_nakshatra / NAKSHATRA_SPAN
+    # --- Step 2 & 3: Determine starting lord and elapsed fraction ---
+    starting_lord, elapsed_fraction = _find_lord_and_elapsed(
+        int(nak_info.nakshatra),
+        nak_info.degree_in_nakshatra,
+    )
     remaining_fraction = 1.0 - elapsed_fraction
 
     # --- Step 4: Generate planet sequence ---

@@ -15,10 +15,16 @@ THE YOGINI DASHA SYSTEM:
     tool alongside Vimsottari.
 
 HOW THE STARTING YOGINI IS DETERMINED:
-    1. Look at the Moon's nakshatra at birth (1-27)
-    2. yogini_index = (nakshatra_value - 1) % 8
-    3. This gives the starting yogini in YOGINI_DASHA_ORDER
-    4. The elapsed fraction is calculated the same way as Vimsottari
+    The count begins from Punarvasu (nakshatra 7) with Pingala (Sun, the
+    2nd yogini).  Each subsequent nakshatra advances one position in the
+    cyclic 8-yogini list.  Because 27 nakshatras are distributed among 8
+    yoginis, some yoginis govern 4 nakshatras and others govern 3.
+
+    Formula:
+        yogini_index = (1 + (nakshatra_number - 7) % 27) % 8
+
+    The elapsed fraction within the first mahadasha is computed from the
+    Moon's position within its current nakshatra, the same way as Vimsottari.
 
 SOURCE: BPHS and various Jyotish classics.
 """
@@ -80,7 +86,7 @@ def calculate_yogini_dasha(
 
     CALCULATION STEPS:
         1. Get Moon's nakshatra info from the birth chart
-        2. Determine the starting yogini: (nakshatra - 1) % 8
+        2. Determine the starting yogini: (1 + (nakshatra - 7) % 27) % 8
         3. Calculate elapsed fraction of the first mahadasha
         4. Generate the 8 mahadasha periods (36 years total)
         5. Optionally subdivide each into antardashas
@@ -108,7 +114,9 @@ def calculate_yogini_dasha(
     nak_info = moon.nakshatra_info
 
     # --- Step 2: Determine starting yogini ---
-    yogini_index = (int(nak_info.nakshatra) - 1) % 8
+    # Count starts from Punarvasu (nakshatra 7) with Pingala (Sun, index 1).
+    # Each successive nakshatra advances one position in the 8-yogini cycle.
+    yogini_index = (1 + (int(nak_info.nakshatra) - 7) % 27) % 8
 
     # --- Step 3: Calculate elapsed fraction of the first dasha ---
     elapsed_fraction = nak_info.degree_in_nakshatra / NAKSHATRA_SPAN

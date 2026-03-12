@@ -715,8 +715,8 @@ GRAHA_DRISHTI: dict[Planet, list[int]] = {
     Planet.JUPITER: [5, 7, 9],
     Planet.VENUS: [7],
     Planet.SATURN: [3, 7, 10],
-    Planet.RAHU: [5, 7, 9],
-    Planet.KETU: [5, 7, 9],
+    Planet.RAHU: [7],
+    Planet.KETU: [7],
 }
 
 # Rashi Drishti (sign-based aspects for Jaimini)
@@ -832,7 +832,7 @@ NAISARGIKA_BALA: dict[Planet, float] = {
     Planet.MOON: 51.43,
     Planet.MARS: 17.14,
     Planet.MERCURY: 25.71,
-    Planet.JUPITER: 34.28,
+    Planet.JUPITER: 34.29,
     Planet.VENUS: 42.86,
     Planet.SATURN: 8.57,
 }
