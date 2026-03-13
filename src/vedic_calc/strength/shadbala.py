@@ -135,15 +135,92 @@ def _sign_from_longitude(longitude: float) -> Sign:
 
 
 # ---------------------------------------------------------------------------
+# Helper: Compound (Panchada) friendship — BPHS Ch. 3 & 27
+# ---------------------------------------------------------------------------
+# Temporal friendship is determined by actual planet positions in the D1 chart.
+# Per BPHS: planets in the 2nd, 3rd, 4th, 10th, 11th, 12th signs from a
+# planet are its temporal (Tatkalika) friends. Planets in the same sign (1st),
+# 5th, 6th, 7th, 8th, 9th signs are temporal enemies.
+#
+# Compound (Panchada Maitri) = Natural + Temporal combined into 5 levels:
+#   Natural Friend  + Temporal Friend  → Great Friend (Adhimitra)
+#   Natural Friend  + Temporal Enemy   → Neutral (Sama)
+#   Natural Neutral + Temporal Friend  → Friend (Mitra)
+#   Natural Neutral + Temporal Enemy   → Enemy (Satru)
+#   Natural Enemy   + Temporal Friend  → Neutral (Sama)
+#   Natural Enemy   + Temporal Enemy   → Great Enemy (Adhisatru)
+
+# Sign offsets (0-indexed from planet's sign) that are temporal friends.
+# Offsets 1,2,3,9,10,11 correspond to the 2nd,3rd,4th,10th,11th,12th signs.
+_TEMPORAL_FRIEND_OFFSETS = {1, 2, 3, 9, 10, 11}
+
+
+def _compute_compound_friendships(
+    chart: BirthChart,
+) -> dict[Planet, dict[Planet, str]]:
+    """Compute Panchada Maitri (compound friendship) for all planet pairs.
+
+    Uses the actual D1 (rasi) chart positions to determine temporal
+    friendship, then combines with natural friendship per BPHS.
+
+    Returns a nested dict: compound[planet_a][planet_b] → one of
+    'great_friend', 'friend', 'neutral', 'enemy', 'great_enemy'.
+    """
+    # Build planet → sign-index (0-11) mapping from D1 positions
+    planet_sign_idx: dict[Planet, int] = {}
+    for p in _SHADBALA_PLANETS:
+        planet_sign_idx[p] = int(chart.planets[p].sign) - 1  # 0-indexed
+
+    compound: dict[Planet, dict[Planet, str]] = {}
+    for p in _SHADBALA_PLANETS:
+        compound[p] = {}
+        p_sign = planet_sign_idx[p]
+        for q in _SHADBALA_PLANETS:
+            if p == q:
+                continue
+            # Temporal relationship: based on sign offset
+            q_sign = planet_sign_idx[q]
+            offset = (q_sign - p_sign) % 12
+            is_temporal_friend = offset in _TEMPORAL_FRIEND_OFFSETS
+
+            # Natural relationship from PLANET_FRIENDSHIP table
+            # 2=friend, 1=neutral, 0=enemy
+            natural = PLANET_FRIENDSHIP[p][q]
+
+            # Combine per BPHS compound friendship table
+            if natural == 2:  # Natural friend
+                if is_temporal_friend:
+                    compound[p][q] = "great_friend"
+                else:
+                    compound[p][q] = "neutral"
+            elif natural == 1:  # Natural neutral
+                if is_temporal_friend:
+                    compound[p][q] = "friend"
+                else:
+                    compound[p][q] = "enemy"
+            else:  # natural == 0, Natural enemy
+                if is_temporal_friend:
+                    compound[p][q] = "neutral"
+                else:
+                    compound[p][q] = "great_enemy"
+    return compound
+
+
+# ---------------------------------------------------------------------------
 # Helper: get dignity of a planet in a given sign (for saptavargaja)
 # ---------------------------------------------------------------------------
 
 def _get_varga_dignity(planet: Planet, sign: Sign, degree_in_sign: float,
-                       is_d1: bool = False) -> str:
+                       is_d1: bool = False,
+                       compound_friendships: dict[Planet, dict[Planet, str]] | None = None,
+                       ) -> str:
     """Return the dignity of a planet in a divisional chart sign.
 
     For D1 chart, checks moolatrikona. For all charts, checks own sign
-    and friendship with the sign lord.
+    and then compound friendship (Panchada Maitri) with the sign lord.
+
+    Per BPHS Ch. 27, Saptavargaja Bala uses compound relationships
+    (natural + temporal) rather than just natural friendship.
 
     Returns one of: 'moolatrikona', 'own_sign', 'great_friend', 'friend',
     'neutral', 'enemy', 'great_enemy'.
@@ -160,11 +237,16 @@ def _get_varga_dignity(planet: Planet, sign: Sign, degree_in_sign: float,
     if sign_lord == planet:
         return "own_sign"
 
-    # Friendship with sign lord
+    # Use compound friendship if available (Panchada Maitri per BPHS)
+    if compound_friendships and planet in compound_friendships:
+        if sign_lord in compound_friendships[planet]:
+            return compound_friendships[planet][sign_lord]
+
+    # Fallback to natural friendship only (should not reach here normally)
     if planet in PLANET_FRIENDSHIP and sign_lord in PLANET_FRIENDSHIP[planet]:
         friendship = PLANET_FRIENDSHIP[planet][sign_lord]
         if friendship == 2:
-            return "great_friend"
+            return "friend"
         if friendship == 1:
             return "neutral"
         return "enemy"
@@ -215,7 +297,8 @@ def _bhava_madhya_longitudes(chart: BirthChart) -> list[float]:
 # 1. Sthana Bala (Positional Strength) — BPHS Ch. 27
 # ---------------------------------------------------------------------------
 
-def _sthana_bala(planet: Planet, chart: BirthChart) -> float:
+def _sthana_bala(planet: Planet, chart: BirthChart,
+                 compound: dict[Planet, dict[Planet, str]] | None = None) -> float:
     """Compute Sthana Bala as the sum of five positional sub-strengths.
 
     Sub-components:
@@ -224,6 +307,10 @@ def _sthana_bala(planet: Planet, chart: BirthChart) -> float:
       (c) Ojhayugma Bala — odd/even sign in D1 and D9 (max 30)
       (d) Kendradi Bala — angular house strength (60/30/15)
       (e) Drekkana Bala — decanate gender match (15 or 0)
+
+    Args:
+        compound: Pre-computed compound (Panchada) friendships for the chart.
+                  If None, they will be computed on the fly.
     """
     pos = chart.planets[planet]
 
@@ -236,18 +323,27 @@ def _sthana_bala(planet: Planet, chart: BirthChart) -> float:
     uchcha_bala = dist / 3.0  # max 60 when 180 deg from debilitation
 
     # (b) Saptavargaja Bala — dignity evaluated in 7 divisional charts
+    # Uses compound (Panchada) friendship per BPHS Ch. 27.
+    # Compound friendship is computed once from D1 positions and applied
+    # to all 7 varga charts — the friendship relationship is chart-level,
+    # not varga-level.
+    if compound is None:
+        compound = _compute_compound_friendships(chart)
+
     saptavargaja_bala = 0.0
     for div in _SAPTAVARGA_DIVISIONS:
         if div == 1:
             # D1: use the rasi chart directly
             dignity = _get_varga_dignity(planet, pos.sign, pos.degree_in_sign,
-                                         is_d1=True)
+                                         is_d1=True,
+                                         compound_friendships=compound)
         else:
             # Compute divisional chart and get the sign
             div_chart = calculate_divisional_chart(chart, div)
             div_sign = div_chart.planets[planet]
             # For non-D1, degree_in_sign is not meaningful for MT check
-            dignity = _get_varga_dignity(planet, div_sign, 0.0, is_d1=False)
+            dignity = _get_varga_dignity(planet, div_sign, 0.0, is_d1=False,
+                                         compound_friendships=compound)
         saptavargaja_bala += _DIGNITY_SCORES.get(dignity, 7.5)
 
     # (c) Ojhayugma Bala — odd/even sign in D1 and D9
@@ -671,11 +767,11 @@ def _chesta_bala(planet: Planet, chart: BirthChart) -> float:
     ut_hour = (dt.hour + dt.minute / 60.0 + dt.second / 3600.0) - chart.timezone_offset
     jd = _to_julian_day(dt.year, dt.month, dt.day, ut_hour)
 
-    # Get Sun's mean longitude
-    sun_mean = _get_mean_longitude(jd, Planet.SUN)
+    # Get Sun's mean longitude (Surya Siddhanta, with desantara correction)
+    sun_mean = _get_mean_longitude(jd, Planet.SUN, chart.longitude)
 
     # Get planet's mean longitude
-    planet_mean = _get_mean_longitude(jd, planet)
+    planet_mean = _get_mean_longitude(jd, planet, chart.longitude)
 
     # Determine sheeghrochcha and mean based on planet type
     if planet in (Planet.MERCURY, Planet.VENUS):
@@ -701,43 +797,115 @@ def _chesta_bala(planet: Planet, chart: BirthChart) -> float:
     return chesta_kendra / 3.0
 
 
-def _get_mean_longitude(jd: float, planet: Planet) -> float:
-    """Compute sidereal mean longitude using standard orbital elements.
+def _get_mean_longitude(jd: float, planet: Planet,
+                        birth_longitude: float = 75.7885) -> float:
+    """Compute sidereal mean longitude using Surya Siddhanta constants.
 
-    Uses tropical J2000.0 elements and subtracts the Lahiri ayanamsa
-    to get sidereal mean longitudes (matching the convention used by
-    PyJHora and classical texts like Surya Siddhanta).
+    Per BPHS Ch. 27, Chesta Bala uses mean longitudes from the Surya
+    Siddhanta system, which computes planetary positions based on mean
+    revolutions over a Mahayuga (4,320,000 years) counted from the Kali
+    epoch.
+
+    The method:
+      1. Compute Kali ahargana (days since Kali epoch, JD 588465.5)
+         with weekday alignment correction.
+      2. daily_motion = (mean_revolutions / civil_days_in_mahayuga) * 360
+      3. mean_longitude = (ahargana * daily_motion) % 360
+      4. Apply desantara correction for birth longitude relative to Ujjain.
+
+    Reference: S. Balachandra Rao, "Indian Astronomy: An Introduction";
+    Surya Siddhanta; BPHS Ch. 27.
+
+    Args:
+        jd: Julian Day number.
+        planet: The planet to compute mean longitude for.
+        birth_longitude: Geographic longitude of the birth place (degrees).
+            Defaults to Ujjain (75.7885°E).
+
+    Returns:
+        Sidereal mean longitude in degrees (0-360).
     """
     if planet == Planet.MOON:
         return 0.0  # Moon has no chesta bala
 
-    # J2000.0 epoch mean longitudes and daily motions (tropical)
-    j2000 = 2451545.0  # Jan 1, 2000 12:00 UT
-    d = jd - j2000  # days from J2000
-
-    # Source: Meeus, Astronomical Algorithms / standard orbital elements
-    _elements = {
-        Planet.SUN: (280.4664567, 0.9856473354),
-        Planet.MARS: (355.4533, 0.5240208),
-        Planet.MERCURY: (252.2509, 4.0923388),
-        Planet.JUPITER: (34.3515, 0.0831294),
-        Planet.VENUS: (181.9798, 1.6021687),
-        Planet.SATURN: (50.0774, 0.0334442),
+    # Surya Siddhanta constants
+    # Mean revolutions in a Mahayuga (4,320,000 solar years)
+    _mean_revolutions = {
+        Planet.SUN: 4320000,
+        Planet.MARS: 2296832,
+        Planet.MERCURY: 17937060,
+        Planet.JUPITER: 364220,
+        Planet.VENUS: 7022376,
+        Planet.SATURN: 146568,
     }
 
-    if planet not in _elements:
+    # Civil days in a Mahayuga per Surya Siddhanta
+    _civil_days_in_mahayuga = 1577917828
+
+    # Daily mean motions (degrees/day) — derived from revolutions
+    # Used for desantara correction
+    _daily_mean_motions = {
+        Planet.SUN: 0.9855609323563241,
+        Planet.MARS: 0.5240193,
+        Planet.MERCURY: 4.0923181,
+        Planet.JUPITER: 0.0830963,
+        Planet.VENUS: 1.6021464,
+        Planet.SATURN: 0.0334393,
+    }
+
+    # Ujjain reference longitude (degrees East)
+    _ujjain_longitude = 75.7885
+
+    if planet not in _mean_revolutions:
         return 0.0
 
-    l0, daily_motion = _elements[planet]
-    tropical_mean = (l0 + daily_motion * d) % 360.0
+    # Kali ahargana with weekday alignment
+    kan = _kali_ahargana(jd)
 
-    # Convert to sidereal by subtracting ayanamsa
-    from vedic_calc.core.ephemeris import get_ayanamsa
-    from vedic_calc.core.constants import Ayanamsa
-    ayanamsa = get_ayanamsa(jd, Ayanamsa.LAHIRI)
-    sidereal_mean = (tropical_mean - ayanamsa) % 360.0
+    # Mean longitude from Surya Siddhanta
+    revs = _mean_revolutions[planet]
+    daily_motion = round(revs / _civil_days_in_mahayuga * 360, 7)
+    mean_long = (kan * daily_motion) % 360.0
 
-    return sidereal_mean
+    # Desantara correction: adjusts for birth location relative to Ujjain
+    # (the reference meridian in Indian astronomy)
+    dc = (_ujjain_longitude - birth_longitude) / 360.0 * _daily_mean_motions[planet]
+    corrected = (mean_long + dc + 360.0) % 360.0
+
+    return corrected
+
+
+# Kali epoch Julian Day (start of Kali Yuga)
+_KALI_EPOCH_JD = 588465.5
+
+# Weekday of Kali epoch: Friday = 5 (0=Sun, 1=Mon, ..., 6=Sat)
+_KALI_EPOCH_WEEKDAY = 5
+
+
+def _kali_ahargana(jd: float) -> int:
+    """Compute Kali ahargana (days since Kali epoch) with weekday correction.
+
+    The Surya Siddhanta counts days from the start of Kali Yuga
+    (JD 588465.5, approximately 3102 BCE Feb 18). A weekday alignment
+    correction ensures that (ahargana % 7) correctly maps to the actual
+    weekday of the given Julian Day. This correction accounts for
+    accumulated calendar drift over the ~5000-year span.
+
+    The Kali epoch started on a Friday (weekday 5 in the 0=Sun convention).
+
+    Args:
+        jd: Julian Day number.
+
+    Returns:
+        Corrected Kali ahargana as an integer number of days.
+    """
+    kad = int(jd - _KALI_EPOCH_JD)
+    wday = kad % 7
+    # Actual weekday from JD: 0=Sun, 1=Mon, ..., 6=Sat
+    actual_weekday = int(math.ceil(jd + 1)) % 7
+    # Correction to align ahargana weekday with actual weekday
+    winc = actual_weekday - _KALI_EPOCH_WEEKDAY - wday
+    return kad + winc
 
 
 # ---------------------------------------------------------------------------
@@ -900,8 +1068,12 @@ def calculate_shadbala(chart: BirthChart) -> dict[Planet, ShadbalaResult]:
     """
     results: dict[Planet, ShadbalaResult] = {}
 
+    # Compute compound (Panchada) friendships once for the whole chart.
+    # These are shared across all planets' Saptavargaja Bala evaluation.
+    compound = _compute_compound_friendships(chart)
+
     for planet in _SHADBALA_PLANETS:
-        sthana = _sthana_bala(planet, chart)
+        sthana = _sthana_bala(planet, chart, compound)
         dig = _dig_bala(planet, chart)
         kaala = _kaala_bala(planet, chart)
         chesta = _chesta_bala(planet, chart)

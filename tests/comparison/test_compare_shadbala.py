@@ -9,7 +9,10 @@ Known algorithmic differences between the two implementations:
   PyJHora uses uncapped distance (max 120 SA). For any planet, vc + pj ≈ 120.
 - **Kaala Bala**: Different Ahargana epoch tables for abda/masa/vaara lords.
   Different Nathonnatha and Tribhaga formulas. Can differ by 50%+.
-- **Chesta Bala**: Different mean longitude orbital elements and methods.
+- **Chesta Bala**: vedic-calc uses Surya Siddhanta mean longitudes (clean,
+  stateless). PyJHora's shad_bala wrapper has global state pollution in
+  const.planet_mean_longitudes that causes its chesta values to vary based
+  on call order. PyJHora's standalone _cheshta_bala matches vedic-calc exactly.
 - **Sthana Bala**: Different compound friendship models (Panchada vs simple).
 - **Drik Bala**: Different aspect strength slab formulas and benefic/malefic
   classification approaches. Both follow BPHS but with different interpretations.
