@@ -27,7 +27,7 @@ WHAT'S SHOWN IN EACH CELL:
     - The sign abbreviation (Ar, Ta, Ge, etc.)
     - Planet abbreviations placed in their respective houses
     - "Asc" marker for the ascendant house
-    - "(R)" suffix for retrograde planets
+    - "℞" suffix for retrograde planets
 
 NO EXTERNAL DEPENDENCIES — just string building for ASCII, and string
 concatenation for SVG.
@@ -49,11 +49,11 @@ def _planets_in_sign(chart: BirthChart, sign: Sign) -> list[str]:
 
     Checks each of the 9 planets and returns the abbreviated names of
     those whose sign matches the given sign. Retrograde planets get
-    a "(R)" suffix.
+    a "℞" suffix.
 
     Example:
         If Moon and Venus are in Taurus, returns ["Mo", "Ve"].
-        If Saturn (retrograde) is in Aquarius, returns ["Sa(R)"].
+        If Saturn (retrograde) is in Aquarius, returns ["Sa℞"].
     """
     result = []
     for planet_enum, pos in chart.planets.items():
@@ -61,7 +61,7 @@ def _planets_in_sign(chart: BirthChart, sign: Sign) -> list[str]:
             abbr = PLANET_ABBREVIATIONS[planet_enum]
             if pos.is_retrograde and planet_enum not in (Planet.RAHU, Planet.KETU):
                 # Rahu/Ketu are always retrograde — don't clutter with (R)
-                abbr += "(R)"
+                abbr += "℞"
             result.append(abbr)
     return result
 
@@ -304,7 +304,7 @@ _SI_SIGN_POSITIONS: dict[Sign, tuple[int, int]] = {
 }
 
 
-def render_svg(chart: BirthChart, style: str = "south") -> str:
+def render_svg(chart: BirthChart, style: str = "south", city_name: str = "") -> str:
     """Render a birth chart as an SVG string.
 
     Generates a self-contained SVG that can be:
@@ -317,6 +317,8 @@ def render_svg(chart: BirthChart, style: str = "south") -> str:
     Args:
         chart: A calculated BirthChart.
         style: "south" for South Indian grid, "north" for North Indian.
+        city_name: Optional city/location name to display below the date
+                   in the center area (e.g. "Mumbai, India").
 
     Returns:
         Complete SVG string (starts with <svg, ends with </svg>).
@@ -328,11 +330,11 @@ def render_svg(chart: BirthChart, style: str = "south") -> str:
         True
     """
     if style == "north":
-        return _render_svg_north(chart)
-    return _render_svg_south(chart)
+        return _render_svg_north(chart, city_name=city_name)
+    return _render_svg_south(chart, city_name=city_name)
 
 
-def _render_svg_south(chart: BirthChart) -> str:
+def _render_svg_south(chart: BirthChart, city_name: str = "") -> str:
     """Generate South Indian style SVG."""
     cell = 100  # pixels per cell
     size = cell * 4  # 400×400
@@ -352,9 +354,13 @@ def _render_svg_south(chart: BirthChart) -> str:
     parts.append(f'<rect x="{cell}" y="{cell}" width="{cell*2}" height="{cell*2}" fill="white" stroke="black" stroke-width="1"/>')
 
     # Center text
-    parts.append(f'<text x="{size//2}" y="{size//2 - 10}" text-anchor="middle" font-size="14" font-weight="bold">Birth Chart</text>')
-    dt_str = chart.birth_datetime.strftime("%Y-%m-%d %H:%M")
-    parts.append(f'<text x="{size//2}" y="{size//2 + 10}" text-anchor="middle" font-size="11">{dt_str}</text>')
+    dt = chart.birth_datetime
+    dt_str = dt.strftime("%-d %b %Y") + " · " + dt.strftime("%-I:%M %p")
+    cy = size // 2
+    parts.append(f'<text x="{size//2}" y="{cy - 10}" text-anchor="middle" font-size="14" font-weight="bold">Birth Chart</text>')
+    parts.append(f'<text x="{size//2}" y="{cy + 10}" text-anchor="middle" font-size="11">{dt_str}</text>')
+    if city_name:
+        parts.append(f'<text x="{size//2}" y="{cy + 28}" text-anchor="middle" font-size="11">{city_name}</text>')
 
     asc_sign = chart.ascendant.sign
 
@@ -380,7 +386,7 @@ def _render_svg_south(chart: BirthChart) -> str:
     return "\n".join(parts)
 
 
-def _render_svg_north(chart: BirthChart) -> str:
+def _render_svg_north(chart: BirthChart, city_name: str = "") -> str:
     """Generate North Indian style SVG (diamond approximation using grid)."""
     cell = 100
     size = cell * 4
@@ -397,10 +403,14 @@ def _render_svg_north(chart: BirthChart) -> str:
         parts.append(f'<line x1="0" y1="{i*cell}" x2="{size}" y2="{i*cell}" stroke="black" stroke-width="1"/>')
 
     # Center label
+    dt = chart.birth_datetime
+    dt_str = dt.strftime("%-d %b %Y") + " · " + dt.strftime("%-I:%M %p")
+    cy = size // 2
     parts.append(f'<rect x="{cell}" y="{cell}" width="{cell*2}" height="{cell*2}" fill="white" stroke="black" stroke-width="1"/>')
-    parts.append(f'<text x="{size//2}" y="{size//2 - 10}" text-anchor="middle" font-size="14" font-weight="bold">North Indian</text>')
-    dt_str = chart.birth_datetime.strftime("%Y-%m-%d %H:%M")
-    parts.append(f'<text x="{size//2}" y="{size//2 + 10}" text-anchor="middle" font-size="11">{dt_str}</text>')
+    parts.append(f'<text x="{size//2}" y="{cy - 10}" text-anchor="middle" font-size="14" font-weight="bold">North Indian</text>')
+    parts.append(f'<text x="{size//2}" y="{cy + 10}" text-anchor="middle" font-size="11">{dt_str}</text>')
+    if city_name:
+        parts.append(f'<text x="{size//2}" y="{cy + 28}" text-anchor="middle" font-size="11">{city_name}</text>')
 
     # House positions in the grid (same layout as ASCII)
     house_grid = [

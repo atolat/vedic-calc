@@ -107,4 +107,4 @@ class TestSVG:
 
     def test_svg_contains_birth_date(self, mumbai_chart):
         svg = render_svg(mumbai_chart)
-        assert "1990-03-15" in svg
+        assert "15 Mar 1990" in svg
