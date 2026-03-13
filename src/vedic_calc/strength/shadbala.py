@@ -562,66 +562,66 @@ def _days_elapsed_since_base(year: int, base_year: int = 1951,
 
 
 def _ayana_bala_for_planet(planet: Planet, jd: float) -> float:
-    """Compute Ayana Bala based on planetary declination.
+    """Compute Ayana Bala using the Surya Siddhanta bhuja method.
 
-    Uses the Surya Siddhanta method: compute the bhuja (reduced longitude),
-    then use a declination table with interpolation.
+    Per BPHS Ch. 27 and Surya Siddhanta:
+      1. Compute the planet's tropical longitude (sidereal + ayanamsa).
+      2. Reduce to bhuja (0-90° range) using quadrant folding.
+      3. Look up declination from the Surya Siddhanta table via interpolation.
+      4. Apply a planet-specific sign based on which ecliptic hemisphere
+         (northern 0-180° or southern 180-360°) benefits the planet:
+           - Northern hemisphere: Sun, Mars, Jupiter, Venus get +1; others -1
+           - Southern hemisphere: Moon, Saturn get +1; others -1
+           - Mercury always gets +1
+      5. Ayana Bala = (24 + signed_declination) * 1.25; Sun gets 2x.
 
-    Per BPHS: Ayana Bala = (24 + declination) * 1.25
-    Sun gets double ayana bala.
+    This matches the traditional BPHS method, NOT modern astronomical
+    declination.  The sign convention encodes which planets benefit from
+    being in which hemisphere.
     """
-    from vedic_calc.core.constants import PLANET_TO_SWE, Ayanamsa
+    from vedic_calc.core.constants import Ayanamsa
     from vedic_calc.core.ephemeris import get_ayanamsa, get_planet_longitude
 
     try:
-        # Get sidereal longitude
+        # Get sidereal longitude and ayanamsa
         sid_lon, _ = get_planet_longitude(jd, planet, Ayanamsa.LAHIRI)
         ayanamsa = get_ayanamsa(jd, Ayanamsa.LAHIRI)
 
-        # Convert back to tropical for declination calculation
+        # Convert to tropical longitude
         trop_lon = (sid_lon + ayanamsa) % 360.0
 
-        # Compute bhuja (reduced tropical longitude to 0-90 range)
-        if 0.0 <= trop_lon <= 90.0:
+        # Compute bhuja (reduce tropical longitude to 0-90° range)
+        if trop_lon <= 90.0:
             bhuja = trop_lon
-        elif 90.0 < trop_lon <= 180.0:
+        elif trop_lon <= 180.0:
             bhuja = 180.0 - trop_lon
-        elif 180.0 < trop_lon <= 270.0:
+        elif trop_lon <= 270.0:
             bhuja = trop_lon - 180.0
         else:
             bhuja = 360.0 - trop_lon
 
-        # Surya Siddhanta declination table (same as PyJHora)
-        # Declination values at bhuja angles 0, 15, 30, 45, 60, 75, 90
-        decl_values = [0, 362 / 60.0, 703 / 60.0, 1002 / 60.0, 1238 / 60.0,
-                       1388 / 60.0, 1440 / 60.0]
+        # Surya Siddhanta declination table (bhuja → declination in degrees)
+        # Values at 0°, 15°, 30°, 45°, 60°, 75°, 90° bhuja
+        decl_values = [0, 362 / 60.0, 703 / 60.0, 1002 / 60.0,
+                       1238 / 60.0, 1388 / 60.0, 1440 / 60.0]
         bhuja_angles = [i * 15 for i in range(7)]
 
-        # Lagrange interpolation: find declination at given bhuja angle
+        # Inverse Lagrange interpolation: find declination at given bhuja
         decl = _lagrange_interpolate(bhuja_angles, decl_values, bhuja)
 
-        # Determine north/south sign based on planet and ecliptic hemisphere.
-        # Per Surya Siddhanta / BPHS convention:
-        # In northern hemisphere (0-180 tropical):
-        #   Sun, Mars, Jupiter, Venus benefit (sign = +1)
-        #   Others get sign = -1
-        # In southern hemisphere (180-360 tropical):
-        #   Moon, Saturn benefit (sign = +1)
-        #   Others get sign = -1
-        # Mercury always gets sign = +1
+        # Planet-specific north/south sign convention per BPHS
         p_idx = _PLANET_INDEX[planet]
-        if trop_lon >= 0.0 and trop_lon < 180.0:
-            north_south = -1
-            if p_idx in [0, 2, 4, 5]:  # Sun, Mars, Jupiter, Venus
-                north_south = 1
+        if trop_lon < 180.0:
+            # Northern ecliptic hemisphere
+            sign = 1 if p_idx in (0, 2, 4, 5) else -1  # Sun,Mars,Jupiter,Venus
         else:
-            north_south = -1
-            if p_idx in [1, 6]:  # Moon, Saturn
-                north_south = 1
-        if p_idx == 3:  # Mercury always positive
-            north_south = 1
+            # Southern ecliptic hemisphere
+            sign = 1 if p_idx in (1, 6) else -1  # Moon, Saturn
+        # Mercury always gets positive sign
+        if p_idx == 3:
+            sign = 1
 
-        signed_decl = north_south * decl
+        signed_decl = sign * decl
     except Exception:
         signed_decl = 0.0
 
@@ -661,7 +661,7 @@ def _chesta_bala(planet: Planet, chart: BirthChart) -> float:
       3. For inferior planets (Mercury, Venus):
          sheeghrochcha = planet's mean longitude, mean = Sun's mean longitude
       4. chesta_kendra = |sheeghrochcha - average(true_long, mean_long)|
-      5. chesta_bala = chesta_kendra / 3 (max 60)
+      5. chesta_bala = chesta_kendra / 3 (can exceed 60)
     """
     # Sun and Moon: 0 chesta bala per BPHS
     if planet in (Planet.SUN, Planet.MOON):
@@ -776,12 +776,28 @@ def _drik_bala(planet: Planet, chart: BirthChart) -> float:
     # Natural malefics: Sun, Mars, Saturn, waning Moon
     benefics = {Planet.JUPITER, Planet.VENUS}
     malefics = {Planet.SUN, Planet.MARS, Planet.SATURN}
-    # Mercury: benefic when alone or with benefics (simplified: always benefic)
-    benefics.add(Planet.MERCURY)
     if is_waxing:
         benefics.add(Planet.MOON)
     else:
         malefics.add(Planet.MOON)
+
+    # Mercury is benefic only when unafflicted — i.e., not conjunct (same sign)
+    # with a malefic planet. If Mercury shares a sign with Sun, Mars, Saturn,
+    # or waning Moon, it becomes malefic.
+    mercury_sign = int(chart.planets[Planet.MERCURY].longitude // 30)
+    mercury_afflicted = False
+    for m in (Planet.SUN, Planet.MARS, Planet.SATURN):
+        if int(chart.planets[m].longitude // 30) == mercury_sign:
+            mercury_afflicted = True
+            break
+    if not mercury_afflicted and not is_waxing:
+        # Waning Moon conjunct Mercury also afflicts it
+        if int(chart.planets[Planet.MOON].longitude // 30) == mercury_sign:
+            mercury_afflicted = True
+    if mercury_afflicted:
+        malefics.add(Planet.MERCURY)
+    else:
+        benefics.add(Planet.MERCURY)
 
     # Compute aspect strengths from all other planets onto this planet
     drik_positive = 0.0
