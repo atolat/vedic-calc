@@ -1064,3 +1064,127 @@ TRIKONA_HOUSES: list[int] = [1, 5, 9]            # Trinal houses
 DUSTHANA_HOUSES: list[int] = [6, 8, 12]          # Malefic houses
 UPACHAYA_HOUSES: list[int] = [3, 6, 10, 11]      # Growth houses
 MARAKA_HOUSES: list[int] = [2, 7]                # Death-inflicting houses
+
+
+# ---------------------------------------------------------------------------
+# Natural benefics / malefics
+# ---------------------------------------------------------------------------
+# Source: BPHS Ch. 3 — natural disposition of planets.
+# Jupiter, Venus, waxing Moon, and well-associated Mercury are benefics.
+# Sun, Mars, Saturn, Rahu, Ketu, waning Moon are malefics.
+# For simplicity we classify Moon as benefic (traditional default) and
+# Mercury as benefic (assuming no malefic association without chart context).
+
+BENEFICS: set[Planet] = {Planet.JUPITER, Planet.VENUS, Planet.MOON, Planet.MERCURY}
+MALEFICS: set[Planet] = {Planet.SUN, Planet.MARS, Planet.SATURN, Planet.RAHU, Planet.KETU}
+
+
+# ---------------------------------------------------------------------------
+# Tajika aspect orbs (degree-based, used in Prashna/Horary astrology)
+# ---------------------------------------------------------------------------
+# Tajika (Greco-Arabic influence on Indian astrology) uses degree-based aspects
+# with orbs, unlike Parashari sign-based aspects. These are the 5 Ptolemaic
+# aspects with their standard Tajika orbs.
+#
+# Format: aspect_name -> (exact_degrees, orb_degrees)
+# A planet at longitude X "aspects" a planet at longitude Y if:
+#   abs(angular_distance(X, Y) - exact_degrees) <= orb_degrees
+#
+# Source: Tajika Neelakanthi, Tajika Shastra
+
+TAJIKA_ASPECT_ORBS: dict[str, tuple[float, float]] = {
+    "conjunction": (0.0, 8.0),
+    "opposition": (180.0, 8.0),
+    "trine": (120.0, 6.0),
+    "square": (90.0, 6.0),
+    "sextile": (60.0, 4.0),
+}
+
+# ---------------------------------------------------------------------------
+# Prashna: Question category → house mapping
+# ---------------------------------------------------------------------------
+# Maps common question topics to the house that signifies that area.
+# The house lord and its condition determine the outcome of the query.
+# Source: Prashna Marga, Ch. 1-3.
+
+QUESTION_TO_HOUSE: dict[str, int] = {
+    "career": 10, "job": 10, "promotion": 10, "business": 10,
+    "marriage": 7, "relationship": 7, "partner": 7, "spouse": 7,
+    "health": 6, "disease": 6, "illness": 6,
+    "wealth": 2, "money": 2, "finance": 2, "income": 11,
+    "education": 4, "study": 4, "exam": 5,
+    "children": 5, "pregnancy": 5, "fertility": 5,
+    "travel": 3, "short_travel": 3, "foreign": 9, "abroad": 9,
+    "property": 4, "home": 4, "real_estate": 4,
+    "legal": 6, "court": 6, "litigation": 6,
+    "spiritual": 9, "religion": 9, "guru": 9,
+    "general": 1,
+}
+
+# ---------------------------------------------------------------------------
+# Planetary speed order (for Tajika: faster planet applies to slower)
+# ---------------------------------------------------------------------------
+# Average daily sidereal motion, fastest to slowest.
+# Moon > Mercury > Venus > Sun > Mars > Jupiter > Saturn > Rahu > Ketu
+# Source: Surya Siddhanta (mean daily motions)
+
+PLANET_SPEED_ORDER: dict[Planet, int] = {
+    Planet.MOON: 0,      # ~13.2°/day (fastest)
+    Planet.MERCURY: 1,   # ~1.4°/day
+    Planet.VENUS: 2,     # ~1.2°/day
+    Planet.SUN: 3,       # ~1.0°/day
+    Planet.MARS: 4,      # ~0.5°/day
+    Planet.JUPITER: 5,   # ~0.08°/day
+    Planet.SATURN: 6,    # ~0.03°/day
+    Planet.RAHU: 7,      # ~0.05°/day (retrograde)
+    Planet.KETU: 8,      # ~0.05°/day (retrograde)
+}
+
+
+# ---------------------------------------------------------------------------
+# Muhurta solver: activity-specific good/bad panchanga elements
+# ---------------------------------------------------------------------------
+# Source: Muhurta Chintamani, Kalaprakashika, and traditional panchanga guides.
+
+# Universally bad tithis — Rikta tithis (4th, 9th, 14th of each paksha)
+BAD_TITHIS: set[int] = {4, 9, 14, 19, 24, 29}  # Both shukla and krishna
+
+# Activity-specific good tithis (tithi numbers 1-30)
+GOOD_TITHIS: dict[str, set[int]] = {
+    "marriage": {2, 3, 5, 7, 10, 11, 13, 17, 22, 25, 27},
+    "business": {2, 3, 5, 7, 10, 11, 13, 15, 17},
+    "travel": {2, 3, 5, 7, 10, 11, 13},
+    "education": {2, 3, 5, 7, 10, 11, 13},
+    "property": {2, 3, 5, 7, 10, 11, 13, 15},
+    "medical": {2, 3, 5, 7, 10, 11, 13},
+    "general": {1, 2, 3, 5, 6, 7, 10, 11, 12, 13, 15},
+}
+
+# Activity-specific good nakshatras (nakshatra numbers 1-27)
+GOOD_NAKSHATRAS: dict[str, set[int]] = {
+    "marriage": {4, 7, 8, 11, 12, 13, 15, 17, 21, 22, 26, 27},  # Rohini, Punarvasu, Pushya, etc.
+    "business": {1, 4, 7, 8, 11, 12, 13, 15, 17, 21, 22, 27},
+    "travel": {1, 4, 7, 8, 11, 13, 15, 21, 22, 27},
+    "education": {1, 4, 7, 8, 12, 13, 15, 21, 22, 27},
+    "property": {4, 7, 8, 11, 12, 13, 15, 17, 21, 22, 26, 27},
+    "medical": {1, 4, 7, 8, 11, 12, 13, 22, 27},
+    "general": {1, 4, 7, 8, 11, 12, 13, 15, 17, 21, 22, 26, 27},
+}
+
+# Universally bad yogas (panchanga yoga, not chart yoga)
+BAD_YOGAS: set[int] = {17, 27}  # Vyatipata (17), Vaidhriti (27)
+
+# Bad karanas — Vishti/Bhadra (repeating karana #4 in each set of 7)
+# Vishti occurs as every 7th karana. Numbers: 4, 11, 18, 25, 32, 39, 46, 53
+BAD_KARANAS: set[int] = {4, 11, 18, 25, 32, 39, 46, 53}
+
+# Activity-specific good weekdays (0=Monday .. 6=Sunday, Python weekday())
+GOOD_VARAS: dict[str, set[int]] = {
+    "marriage": {0, 2, 3, 4},   # Mon, Wed, Thu, Fri
+    "business": {0, 2, 3, 4},   # Mon, Wed, Thu, Fri
+    "travel": {0, 2, 3, 4},     # Mon, Wed, Thu, Fri
+    "education": {0, 2, 3, 4},  # Mon, Wed, Thu, Fri
+    "property": {0, 3, 4},      # Mon, Thu, Fri
+    "medical": {0, 2, 3},       # Mon, Wed, Thu
+    "general": {0, 2, 3, 4},    # Mon, Wed, Thu, Fri
+}

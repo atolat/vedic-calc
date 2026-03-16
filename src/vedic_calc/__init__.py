@@ -43,14 +43,18 @@ from vedic_calc.core.types import (
     FestivalInfo,
     HouseAnalysis,
     MuhurtaInfo,
+    MuhurtaSearchResult,
+    MuhurtaWindow,
     NakshatraInfo,
     PanchangaInfo,
     PlanetPosition,
     PlanetState,
     PoruthamResult,
+    PrashnaVerdict,
     SahamPosition,
     ShadbalaResult,
     SpecialLagna,
+    TajikaYoga,
     TransitChart,
     UpagrahaPosition,
     YogaResult,
@@ -77,6 +81,10 @@ from vedic_calc.compatibility.porutham import calculate_porutham
 from vedic_calc.yoga.calculator import detect_yogas
 from vedic_calc.dosha.calculator import detect_doshas
 from vedic_calc.muhurta.calculator import calculate_muhurta
+from vedic_calc.muhurta.solver import find_muhurta_windows
+from vedic_calc.prashna.chart import cast_prashna_chart
+from vedic_calc.prashna.tajika import detect_tajika_yogas
+from vedic_calc.prashna.evaluator import evaluate_prashna
 from vedic_calc.jaimini.karakas import calculate_chara_karakas
 from vedic_calc.jaimini.arudha import calculate_arudha_padas
 from vedic_calc.strength.ashtakavarga import calculate_ashtakavarga

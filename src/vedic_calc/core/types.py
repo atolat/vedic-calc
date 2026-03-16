@@ -702,3 +702,91 @@ class FestivalInfo(BaseModel, frozen=True):
     date: datetime
     festival_type: str
     description: str
+
+
+# ---------------------------------------------------------------------------
+# Prashna (Horary) types
+# ---------------------------------------------------------------------------
+
+class TajikaYoga(BaseModel, frozen=True):
+    """A Tajika yoga detected in a Prashna (horary) chart.
+
+    Tajika yogas are degree-based aspect geometries used in horary astrology
+    to determine whether a queried matter will succeed or fail. Unlike
+    Parashari yogas (sign-based), Tajika uses exact degree orbs.
+
+    Attributes:
+        name: Yoga name (e.g., "Ithasala", "Easarapha").
+        is_present: Whether this yoga is detected.
+        involved_planets: The planets forming this yoga.
+        description: Brief explanation of the yoga.
+        significance: "favorable", "unfavorable", or "mixed".
+    """
+    name: str
+    is_present: bool
+    involved_planets: list[Planet]
+    description: str
+    significance: str
+
+
+class PrashnaVerdict(BaseModel, frozen=True):
+    """The verdict from evaluating a Prashna (horary) chart.
+
+    Attributes:
+        chart_time: When the Prashna chart was cast.
+        query_house: The house number relevant to the question (1-12).
+        query_house_lord: The planet that lords over the query house.
+        tajika_yogas: List of Tajika yogas detected.
+        verdict: Overall verdict — "favorable", "unfavorable", or "mixed".
+        reasoning: Step-by-step reasoning for the verdict.
+    """
+    chart_time: datetime
+    query_house: int = Field(ge=1, le=12)
+    query_house_lord: Planet
+    tajika_yogas: list[TajikaYoga]
+    verdict: str
+    reasoning: list[str]
+
+
+# ---------------------------------------------------------------------------
+# Muhurta solver types
+# ---------------------------------------------------------------------------
+
+class MuhurtaWindow(BaseModel, frozen=True):
+    """An auspicious time window found by the Muhurta solver.
+
+    Attributes:
+        start: Window start time.
+        end: Window end time.
+        score: Quality score (0-100).
+        tithi_name: Tithi active during this window.
+        nakshatra_name: Moon's nakshatra during this window.
+        yoga_name: Panchanga yoga during this window.
+        karana_name: Karana during this window.
+        vara: Weekday name.
+        chandrabala_ok: Chandrabala favorable (None if natal Moon not provided).
+        tarabala_ok: Tarabala favorable (None if natal Moon not provided).
+        reasoning: Factors that contributed to the score.
+    """
+    start: datetime
+    end: datetime
+    score: float = Field(ge=0.0, le=100.0)
+    tithi_name: str
+    nakshatra_name: str
+    yoga_name: str
+    karana_name: str
+    vara: str
+    chandrabala_ok: bool | None = None
+    tarabala_ok: bool | None = None
+    reasoning: list[str]
+
+
+class MuhurtaSearchResult(BaseModel, frozen=True):
+    """Result of a Muhurta window search.
+
+    Attributes:
+        activity: The activity being planned.
+        windows: Ranked auspicious windows (highest score first).
+    """
+    activity: str
+    windows: list[MuhurtaWindow]
