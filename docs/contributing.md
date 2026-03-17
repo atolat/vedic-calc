@@ -14,7 +14,7 @@ uv sync --extra dev --extra docs
 uv run pytest -v
 
 # Serve docs locally
-uv run mkdocs serve
+uv run zensical serve
 ```
 
 ## Project Structure

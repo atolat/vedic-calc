@@ -69,7 +69,7 @@ jobs:
           fi
 
       - name: Build docs
-        run: uv run --python 3.13 mkdocs build --strict
+        run: uv run --python 3.13 zensical build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
