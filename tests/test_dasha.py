@@ -68,30 +68,25 @@ class TestDashaDurations:
     def test_total_duration_up_to_120_years(self, mumbai_chart):
         """Sum of all mahadasha durations should be ≤ 120 years.
 
-        The first mahadasha is partial (only the remaining portion from birth),
-        so the total from birth is: 120 - elapsed_portion_of_first_dasha.
-        Adding the first dasha's full duration should give exactly 120.
+        All 9 mahadashas use full durations (the first one starts before birth),
+        so the total is exactly 120 years.
         """
         periods = calculate_dasha(mumbai_chart, levels=1)
         mahas = [p for p in periods if p.level == "mahadasha"]
         total = sum(p.duration_years for p in mahas)
 
-        # Total should be < 120 (because first dasha is partial)
-        assert total < 120.0
+        # Total should be exactly 120 (all full durations)
+        assert abs(total - 120.0) < 0.01
 
-        # But adding back the elapsed portion should give 120
-        first = mahas[0]
-        full_first = VIMSOTTARI_YEARS[first.lord]
-        elapsed = full_first - first.duration_years
-        assert abs((total + elapsed) - 120.0) < 0.01
-
-    def test_first_mahadasha_is_partial(self, mumbai_chart):
-        """The first mahadasha should be shorter than its full duration
-        (because part of it has elapsed at birth)."""
+    def test_first_mahadasha_starts_before_birth(self, mumbai_chart):
+        """The first mahadasha starts before birth (elapsed portion)."""
         periods = calculate_dasha(mumbai_chart, levels=1)
         first = periods[0]
+        # First dasha starts before birth
+        assert first.start < mumbai_chart.birth_datetime
+        # But has full duration
         full_years = VIMSOTTARI_YEARS[first.lord]
-        assert first.duration_years <= full_years
+        assert abs(first.duration_years - full_years) < 0.001
 
     def test_subsequent_mahadashas_are_full(self, mumbai_chart):
         """Mahadashas 2-9 should have full durations."""
@@ -141,10 +136,10 @@ class TestDashaSequence:
             gap = abs((mahas[i].end - mahas[i + 1].start).total_seconds())
             assert gap < 1.0, f"Gap between mahadashas {i} and {i+1}: {gap}s"
 
-    def test_starts_at_birth(self, mumbai_chart):
-        """First dasha should start at birth time."""
+    def test_starts_before_birth(self, mumbai_chart):
+        """First dasha should start before birth (elapsed portion)."""
         periods = calculate_dasha(mumbai_chart, levels=1)
-        assert periods[0].start == mumbai_chart.birth_datetime
+        assert periods[0].start <= mumbai_chart.birth_datetime
 
 
 # ---------------------------------------------------------------------------

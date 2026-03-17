@@ -42,10 +42,16 @@ from vedic_calc.core.types import (
     DoshaResult,
     FestivalInfo,
     HouseAnalysis,
+    KPChartResult,
+    KPHouseCusp,
+    KPPlanetInfo,
+    KPSublordInfo,
     MuhurtaInfo,
     MuhurtaSearchResult,
     MuhurtaWindow,
+    MunthaInfo,
     NakshatraInfo,
+    NumerologyResult,
     PanchangaInfo,
     PlanetPosition,
     PlanetState,
@@ -57,6 +63,7 @@ from vedic_calc.core.types import (
     TajikaYoga,
     TransitChart,
     UpagrahaPosition,
+    VarshaphalResult,
     YogaResult,
 )
 from vedic_calc.chart.calculator import calculate_chart
@@ -89,3 +96,7 @@ from vedic_calc.jaimini.karakas import calculate_chara_karakas
 from vedic_calc.jaimini.arudha import calculate_arudha_padas
 from vedic_calc.strength.ashtakavarga import calculate_ashtakavarga
 from vedic_calc.strength.shadbala import calculate_shadbala
+from vedic_calc.varshaphal.calculator import calculate_varshaphal
+from vedic_calc.kp.calculator import calculate_kp_chart
+from vedic_calc.kp.sublords import get_kp_sublord
+from vedic_calc.numerology.calculator import calculate_numerology

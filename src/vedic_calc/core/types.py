@@ -790,3 +790,205 @@ class MuhurtaSearchResult(BaseModel, frozen=True):
     """
     activity: str
     windows: list[MuhurtaWindow]
+
+
+# ---------------------------------------------------------------------------
+# Varshaphal (Solar Return / Annual Horoscope) types
+# ---------------------------------------------------------------------------
+
+class MunthaInfo(BaseModel, frozen=True):
+    """Information about the Muntha in a Varshaphal (annual) chart.
+
+    The Muntha is a progressed point that advances one sign per year
+    from the birth ascendant sign. Its placement in the annual chart
+    indicates general fortune for the year.
+
+    Attributes:
+        sign: Sign number (1-12) where the Muntha falls.
+        sign_name: Human-readable sign name.
+        lord: The planet that rules the Muntha sign.
+        is_benefic_placement: True if Muntha is in a kendra (1,4,7,10)
+                              or trikona (1,5,9) from the annual lagna.
+    """
+    sign: int = Field(ge=1, le=12)
+    sign_name: str
+    lord: int  # Planet enum value
+    is_benefic_placement: bool
+
+
+class VarshaphalResult(BaseModel, frozen=True):
+    """Result of a Varshaphal (Solar Return / Annual Horoscope) calculation.
+
+    Varshaphal is the Tajika annual chart system used in Indian astrology.
+    Each year on the "solar birthday" (when the transiting Sun returns to
+    the exact natal Sun longitude), a new annual chart is cast and analyzed.
+
+    Attributes:
+        birth_year: The year of birth.
+        varshaphal_year: The year for which this annual chart is calculated.
+        age: Age in the varshaphal year (varshaphal_year - birth_year).
+        solar_return_datetime: The exact datetime of the solar return.
+        annual_chart: The birth chart cast for the solar return moment.
+        muntha: Muntha position and analysis.
+        year_lord: Planet enum value of the year lord (Varshesha).
+        year_lord_name: Human-readable name of the year lord.
+        mudda_dasha: List of Mudda Dasha (annual dasha) periods.
+    """
+    birth_year: int
+    varshaphal_year: int
+    age: int
+    solar_return_datetime: datetime
+    annual_chart: BirthChart
+    muntha: MunthaInfo
+    year_lord: int  # Planet enum value
+    year_lord_name: str
+    mudda_dasha: list[DashaPeriod]
+
+
+# ---------------------------------------------------------------------------
+# KP (Krishnamurti Paddhati) types
+# ---------------------------------------------------------------------------
+
+class KPSublordInfo(BaseModel, frozen=True):
+    """Sub-lord information for a zodiacal longitude in the KP system.
+
+    KP (Krishnamurti Paddhati) divides each nakshatra (13°20') into 9
+    unequal sub-divisions proportional to Vimsottari dasha years. This
+    gives a finer prediction resolution than nakshatra alone.
+
+    Attributes:
+        longitude: The sidereal longitude (0-360).
+        sign: Sign enum value.
+        sign_lord: Planet that rules the sign.
+        star_lord: Planet that rules the nakshatra (same as nakshatra lord).
+        sub_lord: Planet that rules the sub-division within the nakshatra.
+        sub_sub_lord: Planet that rules the sub-sub-division (one level deeper).
+    """
+    longitude: float
+    sign: int           # Sign enum value
+    sign_lord: int      # Planet enum value
+    star_lord: int      # Planet enum value (nakshatra lord)
+    sub_lord: int       # Planet enum value
+    sub_sub_lord: int   # Planet enum value
+
+
+class KPHouseCusp(BaseModel, frozen=True):
+    """A Placidus house cusp with KP sub-lord information.
+
+    KP astrology uses the Placidus house system instead of the whole-sign
+    system used in traditional Vedic astrology.
+
+    Attributes:
+        house_number: House number (1-12).
+        cusp_longitude: Sidereal longitude of the cusp (0-360).
+        sign: Sign enum value.
+        sign_lord: Planet that rules the sign.
+        star_lord: Planet that rules the nakshatra.
+        sub_lord: Planet that rules the sub-division.
+    """
+    house_number: int   # 1-12
+    cusp_longitude: float
+    sign: int
+    sign_lord: int
+    star_lord: int
+    sub_lord: int
+
+
+class KPPlanetInfo(BaseModel, frozen=True):
+    """A planet's position with KP sub-lord and significator information.
+
+    Attributes:
+        planet: Planet enum value.
+        longitude: Sidereal longitude (0-360).
+        sign: Sign enum value.
+        sign_lord: Planet that rules the sign.
+        star_lord: Planet that rules the nakshatra.
+        sub_lord: Planet that rules the sub-division.
+        sub_sub_lord: Planet that rules the sub-sub-division.
+        significator_houses: Houses this planet signifies in KP analysis.
+    """
+    planet: int
+    longitude: float
+    sign: int
+    sign_lord: int
+    star_lord: int
+    sub_lord: int
+    sub_sub_lord: int
+    significator_houses: list[int]  # houses this planet signifies
+
+
+class KPChartResult(BaseModel, frozen=True):
+    """Complete KP (Krishnamurti Paddhati) chart analysis.
+
+    Contains planet positions with sub-lords, Placidus house cusps,
+    KP significator table, and ruling planets.
+
+    Attributes:
+        planets: List of KPPlanetInfo for all 9 planets.
+        cusps: List of 12 KPHouseCusp (Placidus system).
+        significators: Mapping of house number (str) to list of planet enum values.
+        ruling_planets: Planet enum values of ruling planets at the birth moment.
+    """
+    planets: list[KPPlanetInfo]
+    cusps: list[KPHouseCusp]
+    significators: dict[str, list[int]]  # house_number_str -> list of planet enum values
+    ruling_planets: list[int]  # Planet enum values of ruling planets at birth moment
+
+
+# ---------------------------------------------------------------------------
+# Numerology types
+# ---------------------------------------------------------------------------
+
+class NumerologyResult(BaseModel, frozen=True):
+    """Result of a numerology calculation from name and birth date.
+
+    Numerology derives meaningful numbers from a person's name (using the
+    Pythagorean letter-to-number mapping) and birth date. These numbers
+    are believed to reveal personality traits, life purpose, and favorable
+    or unfavorable influences.
+
+    PYTHAGOREAN MAPPING:
+        Each letter A-Z maps to a digit 1-9:
+        A=1, B=2, C=3, D=4, E=5, F=6, G=7, H=8, I=9,
+        J=1, K=2, L=3, M=4, N=5, O=6, P=7, Q=8, R=9,
+        S=1, T=2, U=3, V=4, W=5, X=6, Y=7, Z=8
+
+    MASTER NUMBERS:
+        11, 22, and 33 are considered master numbers and are preserved
+        (not reduced further) during digit reduction.
+
+    Attributes:
+        name: The full name used for calculation.
+        date_of_birth: Birth date in "YYYY-MM-DD" format.
+        destiny_number: Sum of all letter values in full name, reduced.
+            Also known as the Expression Number. Reveals life purpose.
+        radical_number: Birth day reduced to single digit or master number.
+            Also known as the Life Path Number. Core personality trait.
+        name_number: Same as destiny number (letter-sum based).
+        lucky_numbers: Favorable single digits derived from radical number.
+        evil_numbers: Unfavorable single digits (complement of lucky numbers).
+        personal_year: (birth_day + birth_month + current_year) reduced.
+            Indicates the theme/energy of the current year.
+
+    Example:
+        >>> from vedic_calc import calculate_numerology
+        >>> result = calculate_numerology("John Doe", 1990, 3, 15)
+        >>> result.radical_number
+        6
+        >>> result.destiny_number
+        2
+    """
+    name: str
+    date_of_birth: str  # "YYYY-MM-DD"
+    destiny_number: int
+    radical_number: int
+    name_number: int
+    lucky_numbers: list[int]
+    evil_numbers: list[int]
+    personal_year: int
+
+
+# ---------------------------------------------------------------------------
+# Lal Kitab types
+# ---------------------------------------------------------------------------
+

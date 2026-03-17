@@ -154,16 +154,17 @@ def calculate_dasha(
 
     # ─── Step 4: Generate mahadasha periods ───
     periods: list[DashaPeriod] = []
-    current_start = chart.birth_datetime
+
+    # The first mahadasha started BEFORE birth — go back by the elapsed portion.
+    # Example: Moon in Swati (Rahu = 18 yrs), 37.5% elapsed → dasha started
+    # 18 × 0.375 = 6.75 years before birth.
+    first_full_years = VIMSOTTARI_YEARS[starting_lord]
+    elapsed_days = first_full_years * elapsed_fraction * _DAYS_PER_YEAR
+    current_start = chart.birth_datetime - timedelta(days=elapsed_days)
 
     for i, lord in enumerate(sequence):
         full_years = VIMSOTTARI_YEARS[lord]
-
-        if i == 0:
-            # First mahadasha: only the remaining portion is left
-            duration_years = full_years * remaining_fraction
-        else:
-            duration_years = float(full_years)
+        duration_years = float(full_years)
 
         duration_days = duration_years * _DAYS_PER_YEAR
         end = current_start + timedelta(days=duration_days)

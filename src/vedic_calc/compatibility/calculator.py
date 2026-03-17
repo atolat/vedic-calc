@@ -29,38 +29,23 @@ from vedic_calc.core.constants import Nakshatra, Planet, Sign, SIGN_LORDS
 # Lookup tables for Ashtakoot computation
 # ---------------------------------------------------------------------------
 
-# VARNA (spiritual nature) — 4 groups, repeating across 27 nakshatras
-# Brahmin (highest) > Kshatriya > Vaishya > Shudra
-# Assigned cyclically in groups of nakshatras.
-# Source: Classical Ashtakoot tables.
+# VARNA (spiritual nature) — based on Moon sign element
+# Brahmin (1, highest) > Kshatriya (2) > Vaishya (3) > Shudra (4)
+# Water signs = Brahmin, Fire = Kshatriya, Earth = Vaishya, Air = Shudra
+# Source: Standard Ashtakoot Milan (sign-based Varna assignment).
 _VARNA = {
-    Nakshatra.ASHWINI: 3,       # Kshatriya
-    Nakshatra.BHARANI: 4,       # Shudra
-    Nakshatra.KRITTIKA: 1,      # Brahmin
-    Nakshatra.ROHINI: 4,        # Shudra
-    Nakshatra.MRIGASHIRA: 2,    # Vaishya
-    Nakshatra.ARDRA: 4,         # Shudra
-    Nakshatra.PUNARVASU: 2,     # Vaishya
-    Nakshatra.PUSHYA: 3,        # Kshatriya
-    Nakshatra.ASHLESHA: 4,      # Shudra
-    Nakshatra.MAGHA: 3,         # Kshatriya
-    Nakshatra.PURVA_PHALGUNI: 1,# Brahmin
-    Nakshatra.UTTARA_PHALGUNI: 3,# Kshatriya
-    Nakshatra.HASTA: 2,         # Vaishya
-    Nakshatra.CHITRA: 4,        # Shudra
-    Nakshatra.SWATI: 4,         # Shudra
-    Nakshatra.VISHAKHA: 1,      # Brahmin
-    Nakshatra.ANURADHA: 4,      # Shudra
-    Nakshatra.JYESHTHA: 2,      # Vaishya
-    Nakshatra.MOOLA: 4,         # Shudra
-    Nakshatra.PURVA_ASHADHA: 1, # Brahmin
-    Nakshatra.UTTARA_ASHADHA: 3,# Kshatriya
-    Nakshatra.SHRAVANA: 4,      # Shudra
-    Nakshatra.DHANISHTA: 2,     # Vaishya
-    Nakshatra.SHATABHISHA: 4,   # Shudra
-    Nakshatra.PURVA_BHADRAPADA: 1,# Brahmin
-    Nakshatra.UTTARA_BHADRAPADA: 3,# Kshatriya
-    Nakshatra.REVATI: 4,        # Shudra
+    Sign.ARIES: 2,        # Fire → Kshatriya
+    Sign.TAURUS: 3,       # Earth → Vaishya
+    Sign.GEMINI: 4,       # Air → Shudra
+    Sign.CANCER: 1,       # Water → Brahmin
+    Sign.LEO: 2,          # Fire → Kshatriya
+    Sign.VIRGO: 3,        # Earth → Vaishya
+    Sign.LIBRA: 4,        # Air → Shudra
+    Sign.SCORPIO: 1,      # Water → Brahmin
+    Sign.SAGITTARIUS: 2,  # Fire → Kshatriya
+    Sign.CAPRICORN: 3,    # Earth → Vaishya
+    Sign.AQUARIUS: 4,     # Air → Shudra
+    Sign.PISCES: 1,       # Water → Brahmin
 }
 
 _VARNA_NAMES = {1: "Brahmin", 2: "Vaishya", 3: "Kshatriya", 4: "Shudra"}
@@ -87,10 +72,10 @@ _VASHYA_GROUP = {
 # Vashya compatibility matrix: (group1, group2) -> points (0, 1, or 2)
 # Same group = 2, food chain friendly = 1, hostile = 0
 _VASHYA_SCORE = {
-    (1, 1): 2, (1, 2): 0, (1, 3): 1, (1, 4): 1, (1, 5): 0,
+    (1, 1): 2, (1, 2): 0, (1, 3): 1, (1, 4): 0.5, (1, 5): 0,
     (2, 1): 0, (2, 2): 2, (2, 3): 1, (2, 4): 0, (2, 5): 0,
     (3, 1): 1, (3, 2): 0, (3, 3): 2, (3, 4): 1, (3, 5): 0,
-    (4, 1): 1, (4, 2): 0, (4, 3): 1, (4, 4): 2, (4, 5): 0,
+    (4, 1): 0.5, (4, 2): 0, (4, 3): 1, (4, 4): 2, (4, 5): 0,
     (5, 1): 0, (5, 2): 0, (5, 3): 0, (5, 4): 0, (5, 5): 2,
 }
 
@@ -147,6 +132,34 @@ _YONI_ENEMIES = {
     frozenset({8, 10}),   # Cow vs Tiger
 }
 
+# Yoni unfriendly pairs — not enemies, but predator/prey or hostile → 1 point
+# (Non-enemy, non-same pairs not in this set get 2 points)
+_YONI_UNFRIENDLY = {
+    frozenset({1, 8}),    # Horse vs Cow
+    frozenset({1, 10}),   # Horse vs Tiger
+    frozenset({1, 11}),   # Horse vs Deer
+    frozenset({1, 14}),   # Horse vs Lion
+    frozenset({3, 6}),    # Sheep vs Cat
+    frozenset({3, 10}),   # Sheep vs Tiger
+    frozenset({3, 14}),   # Sheep vs Lion
+    frozenset({4, 6}),    # Serpent vs Cat
+    frozenset({4, 7}),    # Serpent vs Rat
+    frozenset({4, 8}),    # Serpent vs Cow
+    frozenset({4, 9}),    # Serpent vs Buffalo
+    frozenset({5, 7}),    # Dog vs Rat
+    frozenset({5, 8}),    # Dog vs Cow
+    frozenset({5, 10}),   # Dog vs Tiger
+    frozenset({5, 14}),   # Dog vs Lion
+    frozenset({6, 10}),   # Cat vs Tiger
+    frozenset({6, 14}),   # Cat vs Lion
+    frozenset({8, 11}),   # Cow vs Deer
+    frozenset({8, 14}),   # Cow vs Lion
+    frozenset({9, 10}),   # Buffalo vs Tiger
+    frozenset({10, 11}),  # Tiger vs Deer
+    frozenset({10, 13}),  # Tiger vs Mongoose
+    frozenset({10, 14}),  # Tiger vs Lion
+}
+
 # GANA (temperament) — 3 types: Deva (divine), Manushya (human), Rakshasa (demon)
 _GANA = {
     Nakshatra.ASHWINI: 1,          # Deva
@@ -189,31 +202,37 @@ _GANA_SCORE = {
 
 # NADI (health/constitution) — 3 types: Aadi (Vata), Madhya (Pitta), Antya (Kapha)
 # Same nadi = 0 points (dosham — health risk), different = 8 points
+# Pattern is zigzag 1-2-3-3-2-1 repeating every 6 nakshatras (BPHS standard).
 _NADI = {
+    # Group 1 (1-6)
     Nakshatra.ASHWINI: 1,           # Aadi (Vata)
     Nakshatra.BHARANI: 2,           # Madhya (Pitta)
     Nakshatra.KRITTIKA: 3,          # Antya (Kapha)
     Nakshatra.ROHINI: 3,            # Antya
     Nakshatra.MRIGASHIRA: 2,        # Madhya
     Nakshatra.ARDRA: 1,             # Aadi
+    # Group 2 (7-12)
     Nakshatra.PUNARVASU: 1,         # Aadi
     Nakshatra.PUSHYA: 2,            # Madhya
     Nakshatra.ASHLESHA: 3,          # Antya
-    Nakshatra.MAGHA: 1,             # Aadi
+    Nakshatra.MAGHA: 3,             # Antya
     Nakshatra.PURVA_PHALGUNI: 2,    # Madhya
-    Nakshatra.UTTARA_PHALGUNI: 3,   # Antya
-    Nakshatra.HASTA: 3,             # Antya
+    Nakshatra.UTTARA_PHALGUNI: 1,   # Aadi
+    # Group 3 (13-18)
+    Nakshatra.HASTA: 1,             # Aadi
     Nakshatra.CHITRA: 2,            # Madhya
-    Nakshatra.SWATI: 1,             # Aadi
-    Nakshatra.VISHAKHA: 1,          # Aadi
+    Nakshatra.SWATI: 3,             # Antya
+    Nakshatra.VISHAKHA: 3,          # Antya
     Nakshatra.ANURADHA: 2,          # Madhya
-    Nakshatra.JYESHTHA: 3,          # Antya
+    Nakshatra.JYESHTHA: 1,          # Aadi
+    # Group 4 (19-24)
     Nakshatra.MOOLA: 1,             # Aadi
     Nakshatra.PURVA_ASHADHA: 2,     # Madhya
     Nakshatra.UTTARA_ASHADHA: 3,    # Antya
     Nakshatra.SHRAVANA: 3,          # Antya
     Nakshatra.DHANISHTA: 2,         # Madhya
     Nakshatra.SHATABHISHA: 1,       # Aadi
+    # Group 5 (25-27)
     Nakshatra.PURVA_BHADRAPADA: 1,  # Aadi
     Nakshatra.UTTARA_BHADRAPADA: 2, # Madhya
     Nakshatra.REVATI: 3,            # Antya
@@ -288,9 +307,9 @@ class CompatibilityResult(BaseModel, frozen=True):
 # Kutta calculators
 # ---------------------------------------------------------------------------
 
-def _calc_varna(nk1: Nakshatra, nk2: Nakshatra) -> KuttaScore:
+def _calc_varna(s1: Sign, s2: Sign) -> KuttaScore:
     """Varna kutta: person1 varna >= person2 varna → 1 point."""
-    v1, v2 = _VARNA[nk1], _VARNA[nk2]
+    v1, v2 = _VARNA[s1], _VARNA[s2]
     # Lower number = higher varna. Person1 (groom) should be >= person2 (bride).
     score = 1.0 if v1 <= v2 else 0.0
     return KuttaScore(
@@ -343,8 +362,10 @@ def _calc_yoni(nk1: Nakshatra, nk2: Nakshatra) -> KuttaScore:
         score = 4.0 if g1 != g2 else 3.0
     elif frozenset({a1, a2}) in _YONI_ENEMIES:
         score = 0.0
+    elif frozenset({a1, a2}) in _YONI_UNFRIENDLY:
+        score = 1.0  # Unfriendly but not enemy
     else:
-        score = 2.0  # Neutral
+        score = 2.0  # Friendly/neutral
 
     return KuttaScore(name="Yoni", obtained=score, maximum=4.0, description=desc)
 
@@ -367,7 +388,7 @@ def _calc_graha_maitri(s1: Sign, s2: Sign) -> KuttaScore:
         elif total == 2:     # Both neutral
             score = 3.0
         elif total == 1:     # One neutral, one enemy
-            score = 1.0
+            score = 0.5
         else:                # Both enemies
             score = 0.0
 
@@ -448,7 +469,7 @@ def calculate_compatibility(
         CompatibilityResult with all 8 kutta scores and total.
     """
     kuttas = [
-        _calc_varna(person1_nakshatra, person2_nakshatra),
+        _calc_varna(person1_sign, person2_sign),
         _calc_vashya(person1_sign, person2_sign),
         _calc_tara(person1_nakshatra, person2_nakshatra),
         _calc_yoni(person1_nakshatra, person2_nakshatra),

@@ -170,34 +170,50 @@ def _detect_kaal_sarpa(chart: BirthChart) -> DoshaResult:
         Planet.JUPITER, Planet.VENUS, Planet.SATURN,
     ]
 
-    # Check how many planets are on each side of the Rahu→Ketu arc
+    # Check how many planets are on each side of the Rahu→Ketu arc.
+    # Planets conjunct a node — either by degree (within 5°) OR by sign
+    # (same sign as Rahu/Ketu) — are considered "on the axis" and don't
+    # count toward either side. This matches the widely-used partial
+    # Kalsarpa definition.
+    NODE_CONJUNCTION_ORB = 5.0
+    rahu_sign = chart.planets[Planet.RAHU].sign
+    ketu_sign = chart.planets[Planet.KETU].sign
+
     in_rahu_ketu_arc = 0
     in_ketu_rahu_arc = 0
-    conjunct_node = False
+    on_axis = 0
 
     for planet in classical_planets:
         lon = chart.planets[planet].longitude
+        p_sign = chart.planets[planet].sign
 
-        # Check if conjunct a node (within 1 degree)
         dist_rahu = min(abs(lon - rahu_lon), 360 - abs(lon - rahu_lon))
         dist_ketu = min(abs(lon - ketu_lon), 360 - abs(lon - ketu_lon))
-        if dist_rahu <= 1.0 or dist_ketu <= 1.0:
-            conjunct_node = True
 
-        if _is_between_clockwise(lon, rahu_lon, ketu_lon):
+        if (dist_rahu <= NODE_CONJUNCTION_ORB or dist_ketu <= NODE_CONJUNCTION_ORB
+                or p_sign == rahu_sign or p_sign == ketu_sign):
+            on_axis += 1
+        elif _is_between_clockwise(lon, rahu_lon, ketu_lon):
             in_rahu_ketu_arc += 1
         else:
             in_ketu_rahu_arc += 1
 
+    # Full: all 7 on one side (no planets on axis)
+    # Partial: all non-axis planets on one side (at least 1 on axis)
     all_one_side = (in_rahu_ketu_arc == 7) or (in_ketu_rahu_arc == 7)
-    is_present = all_one_side
+    partial = (
+        on_axis > 0
+        and (in_rahu_ketu_arc + on_axis + in_ketu_rahu_arc == 7)
+        and (in_rahu_ketu_arc == 0 or in_ketu_rahu_arc == 0)
+    )
+    is_present = all_one_side or partial
 
-    if is_present and conjunct_node:
-        severity = "moderate"  # Partial
-        variant = "Partial"
-    elif is_present:
-        severity = "severe"  # Full
+    if all_one_side and on_axis == 0:
+        severity = "severe"
         variant = "Full"
+    elif is_present:
+        severity = "moderate"
+        variant = "Partial"
     else:
         severity = "none"
         variant = ""

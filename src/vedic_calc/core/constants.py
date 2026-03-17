@@ -802,7 +802,7 @@ ASHTAKAVARGA_BENEFIC: dict[Planet, dict[Planet | str, list[int]]] = {
     Planet.VENUS: {
         Planet.SUN: [8, 11, 12],
         Planet.MOON: [1, 2, 3, 4, 5, 8, 9, 11, 12],
-        Planet.MARS: [3, 4, 6, 9, 11, 12],
+        Planet.MARS: [3, 5, 6, 9, 11, 12],  # BPHS: house 5 (not 4) — verified via AstrologyAPI
         Planet.MERCURY: [3, 5, 6, 9, 11],
         Planet.JUPITER: [5, 8, 9, 10, 11],
         Planet.VENUS: [1, 2, 3, 4, 5, 8, 9, 10, 11],
