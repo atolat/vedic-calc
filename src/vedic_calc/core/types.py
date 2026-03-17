@@ -37,6 +37,35 @@ from pydantic import BaseModel, Field
 from vedic_calc.core.constants import Ayanamsa, Nakshatra, Planet, Sign
 
 
+class AvakhadaInfo(BaseModel, frozen=True):
+    """Avakhada (birth summary) information derived from Moon's nakshatra and sign."""
+    varna: str           # Brahmin/Kshatriya/Vaishya/Shudra
+    vashya: str          # Manava/Vanachara/Chatushpada/Jalchara/Keeta
+    yoni: str            # Animal name (Horse, Elephant, etc.)
+    gana: str            # Deva/Manushya/Rakshasa
+    nadi: str            # Aadi (Vata)/Madhya (Pitta)/Antya (Kapha)
+    nakshatra_lord: Planet
+    sign_lord: Planet
+    name_letter: str     # First syllable for naming
+    tatva: str           # Element: Fire/Earth/Air/Water
+    yunja: str           # Poorva/Madhya/Antya (first/middle/last third of nakshatra based on pada)
+    paya: str            # Gold/Silver/Copper/Iron (based on nakshatra)
+
+
+class DishaShoolInfo(BaseModel, frozen=True):
+    """Disha Shool (inauspicious travel direction) for a weekday."""
+    weekday: str
+    direction: str  # "East", "West", "North", "South"
+    description: str
+
+
+class AnandadiYogaInfo(BaseModel, frozen=True):
+    """Anandadi Yoga based on tithi-weekday combination."""
+    yoga_name: str
+    quality: str    # "auspicious" or "inauspicious"
+    description: str
+
+
 class NakshatraInfo(BaseModel, frozen=True):
     """Information about a nakshatra (lunar mansion) position.
 
@@ -986,6 +1015,262 @@ class NumerologyResult(BaseModel, frozen=True):
     lucky_numbers: list[int]
     evil_numbers: list[int]
     personal_year: int
+
+
+# ---------------------------------------------------------------------------
+# Planet Relationship types
+# ---------------------------------------------------------------------------
+
+class PlanetRelationship(BaseModel, frozen=True):
+    """Relationship between two planets in a chart.
+
+    Vedic astrology defines three levels of planetary relationship:
+    1. Natural (Naisargika) — fixed, from classical texts (BPHS).
+    2. Temporal (Tatkalika) — based on chart positions.
+    3. Compound (Panchadha Maitri) — combination of natural + temporal.
+
+    Attributes:
+        planet: The reference planet.
+        other_planet: The planet being compared to.
+        natural: Natural relationship — "friend", "neutral", or "enemy".
+        temporal: Temporal relationship — "friend" or "enemy".
+        compound: Compound relationship — "great_friend", "friend",
+                  "neutral", "enemy", or "great_enemy".
+    """
+    planet: Planet
+    other_planet: Planet
+    natural: str         # "friend", "neutral", "enemy"
+    temporal: str        # "friend", "enemy"
+    compound: str        # "great_friend", "friend", "neutral", "enemy", "great_enemy"
+
+
+class PlanetRelationshipResult(BaseModel, frozen=True):
+    """All planet relationships in a chart.
+
+    Contains the natural, temporal, and compound (Panchadha Maitri)
+    relationships between all 7 classical planets (Sun through Saturn).
+    Rahu and Ketu are excluded as they do not participate in the
+    friendship system.
+
+    Attributes:
+        relationships: Mapping of each classical planet to its list of
+                       relationships with the other 6 classical planets.
+    """
+    relationships: dict[Planet, list[PlanetRelationship]]
+
+
+# ---------------------------------------------------------------------------
+# Sade Sati and Chandrashtama types
+# ---------------------------------------------------------------------------
+
+class SadeSatiPhase(BaseModel, frozen=True):
+    """A single phase of Sade Sati."""
+    phase: str          # "rising" (12th from Moon), "peak" (same sign), "setting" (2nd from Moon)
+    sign: Sign          # The sign Saturn is transiting during this phase
+    start: datetime
+    end: datetime
+
+
+class SadeSatiResult(BaseModel, frozen=True):
+    """Sade Sati analysis result."""
+    is_active: bool
+    current_phase: str | None = None  # "rising", "peak", "setting", or None
+    moon_sign: Sign
+    phases: list[SadeSatiPhase]
+
+
+class ChandrashtamaWindow(BaseModel, frozen=True):
+    """A period when Moon transits the 8th sign from natal Moon."""
+    start: datetime
+    end: datetime
+    transit_sign: Sign
+
+
+class ChandrashtamaResult(BaseModel, frozen=True):
+    """Chandrashtama (Moon in 8th from natal Moon) analysis."""
+    natal_moon_sign: Sign
+    chandrashtama_sign: Sign   # The 8th sign from natal Moon
+    windows: list[ChandrashtamaWindow]
+
+
+# ---------------------------------------------------------------------------
+# Functional Nature types
+# ---------------------------------------------------------------------------
+
+class FunctionalNature(BaseModel, frozen=True):
+    """Functional nature of a planet for a specific ascendant."""
+    planet: Planet
+    nature: str         # "yogakaraka", "benefic", "malefic", "neutral"
+    ruled_houses: list[int]   # House numbers this planet lords
+    description: str
+
+
+# ---------------------------------------------------------------------------
+# Chalit Chart types
+# ---------------------------------------------------------------------------
+
+class ChalitHouse(BaseModel, frozen=True):
+    """A house in the Chalit (Bhava) chart."""
+    house_number: int = Field(ge=1, le=12)
+    bhav_madhya: float      # Midpoint longitude (0-360)
+    bhav_sandhi_start: float  # Cusp start longitude (0-360)
+    bhav_sandhi_end: float    # Cusp end longitude (0-360)
+    sign: Sign              # Sign at bhav madhya
+
+
+class ChalitChart(BaseModel, frozen=True):
+    """Chalit (Bhava) chart showing planet house placements by cusps."""
+    houses: list[ChalitHouse]
+    planet_houses: dict[Planet, int]  # Planet -> chalit house number
+
+
+# ---------------------------------------------------------------------------
+# Panchanga transition types
+# ---------------------------------------------------------------------------
+
+
+class TransitionMoment(BaseModel, frozen=True):
+    """An exact moment when a panchanga element changes."""
+    element: str          # "tithi", "nakshatra", "yoga", "karana"
+    from_value: int       # Previous element number
+    to_value: int         # New element number
+    from_name: str        # Previous element name
+    to_name: str          # New element name
+    transition_time: datetime  # Exact local time of transition
+
+
+class PanchangaTransitions(BaseModel, frozen=True):
+    """All panchanga transitions for a day (sunrise to next sunrise)."""
+    date: datetime
+    sunrise: datetime
+    next_sunrise: datetime
+    transitions: list[TransitionMoment]
+
+
+# ---------------------------------------------------------------------------
+# Event Timeline types
+# ---------------------------------------------------------------------------
+
+
+class TimelineEvent(BaseModel, frozen=True):
+    """A single event in the life timeline."""
+    event_type: str     # "dasha_transition", "sade_sati_start", "sade_sati_end", "saturn_return", "jupiter_transit", "rahu_ketu_return"
+    date: datetime
+    description: str
+    details: dict[str, str] = {}
+
+
+class EventTimeline(BaseModel, frozen=True):
+    """Chronological life events for a birth chart."""
+    chart_owner: str    # label like "Mumbai 1990"
+    start_date: datetime
+    end_date: datetime
+    events: list[TimelineEvent]
+
+
+# ---------------------------------------------------------------------------
+# Scoring types (probabilistic yoga/dosha strength)
+# ---------------------------------------------------------------------------
+
+
+class ScoringFactor(BaseModel, frozen=True):
+    """A factor contributing to a yoga/dosha score."""
+    name: str
+    value: float       # contribution to total score (-1 to +1 scale)
+    description: str
+
+
+class ScoredYogaResult(BaseModel, frozen=True):
+    """A yoga with probabilistic strength score."""
+    name: str
+    category: str
+    is_present: bool
+    strength: float     # 0-100
+    factors: list[ScoringFactor]
+    description: str
+
+
+class ScoredDoshaResult(BaseModel, frozen=True):
+    """A dosha with probabilistic severity score."""
+    name: str
+    is_present: bool
+    severity_score: float  # 0-100 (0=not present, 100=worst)
+    factors: list[ScoringFactor]
+    description: str
+
+
+# ---------------------------------------------------------------------------
+# KP Significator types
+# ---------------------------------------------------------------------------
+
+class KPSignificatorDetail(BaseModel, frozen=True):
+    """KP significator detail for a planet."""
+    planet: Planet
+    level1_houses: list[int]   # Houses occupied
+    level2_houses: list[int]   # Star lord's occupied houses
+    level3_houses: list[int]   # Houses owned
+    level4_houses: list[int]   # Star lord's owned houses
+    all_signified_houses: list[int]  # Union of all levels
+
+
+class KPHouseSignificators(BaseModel, frozen=True):
+    """All significator planets for a specific house."""
+    house_number: int
+    significators: list[Planet]   # Planets signifying this house
+
+
+# ---------------------------------------------------------------------------
+# Sudarshana Chakra types
+# ---------------------------------------------------------------------------
+
+class SudarshanaHouse(BaseModel, frozen=True):
+    """A house in one ring of the Sudarshana Chakra."""
+    house_number: int
+    sign: Sign
+    planets: list[Planet]
+
+
+class SudarshanaChakra(BaseModel, frozen=True):
+    """Three concentric rings: from Lagna, Moon, Sun."""
+    lagna_ring: list[SudarshanaHouse]
+    moon_ring: list[SudarshanaHouse]
+    sun_ring: list[SudarshanaHouse]
+
+
+# ---------------------------------------------------------------------------
+# Papasamyam types
+# ---------------------------------------------------------------------------
+
+class PapasamyamChart(BaseModel, frozen=True):
+    """Papa (malefic) points for one person."""
+    lagna_score: float
+    moon_score: float
+    venus_score: float
+    total: float
+
+
+class PapasamyamResult(BaseModel, frozen=True):
+    """Papasamyam (malefic balance) compatibility check."""
+    person1: PapasamyamChart
+    person2: PapasamyamChart
+    is_balanced: bool
+    difference: float
+    description: str
+
+
+# ---------------------------------------------------------------------------
+# Panchavargeeya Bala types
+# ---------------------------------------------------------------------------
+
+class PanchavargeeaBala(BaseModel, frozen=True):
+    """Panchavargeeya Bala (5-fold dignity strength) for annual chart planets."""
+    planet: Planet
+    d1_dignity: str     # "own", "exalted", "moolatrikona", "friend", "neutral", "enemy", "debilitated"
+    d2_dignity: str
+    d3_dignity: str
+    d9_dignity: str
+    d12_dignity: str
+    total_points: float  # 0-20 scale
 
 
 # ---------------------------------------------------------------------------

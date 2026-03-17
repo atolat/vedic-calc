@@ -23,51 +23,17 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 from vedic_calc.core.constants import Nakshatra, Planet, Sign, SIGN_LORDS
-
-
-# ---------------------------------------------------------------------------
-# Lookup tables for Ashtakoot computation
-# ---------------------------------------------------------------------------
-
-# VARNA (spiritual nature) — based on Moon sign element
-# Brahmin (1, highest) > Kshatriya (2) > Vaishya (3) > Shudra (4)
-# Water signs = Brahmin, Fire = Kshatriya, Earth = Vaishya, Air = Shudra
-# Source: Standard Ashtakoot Milan (sign-based Varna assignment).
-_VARNA = {
-    Sign.ARIES: 2,        # Fire → Kshatriya
-    Sign.TAURUS: 3,       # Earth → Vaishya
-    Sign.GEMINI: 4,       # Air → Shudra
-    Sign.CANCER: 1,       # Water → Brahmin
-    Sign.LEO: 2,          # Fire → Kshatriya
-    Sign.VIRGO: 3,        # Earth → Vaishya
-    Sign.LIBRA: 4,        # Air → Shudra
-    Sign.SCORPIO: 1,      # Water → Brahmin
-    Sign.SAGITTARIUS: 2,  # Fire → Kshatriya
-    Sign.CAPRICORN: 3,    # Earth → Vaishya
-    Sign.AQUARIUS: 4,     # Air → Shudra
-    Sign.PISCES: 1,       # Water → Brahmin
-}
-
-_VARNA_NAMES = {1: "Brahmin", 2: "Vaishya", 3: "Kshatriya", 4: "Shudra"}
-
-# VASHYA (mutual influence) groups — based on Moon sign
-# Each sign belongs to one of 5 groups:
-#   1=Manava (human), 2=Vanachara (wild), 3=Chatushpada (quadruped),
-#   4=Jalchara (water), 5=Keeta (insect)
-_VASHYA_GROUP = {
-    Sign.ARIES: 3,       # Chatushpada
-    Sign.TAURUS: 3,      # Chatushpada
-    Sign.GEMINI: 1,      # Manava
-    Sign.CANCER: 4,      # Jalchara
-    Sign.LEO: 2,         # Vanachara
-    Sign.VIRGO: 1,       # Manava
-    Sign.LIBRA: 1,       # Manava
-    Sign.SCORPIO: 5,     # Keeta
-    Sign.SAGITTARIUS: 1, # Manava (first half human)
-    Sign.CAPRICORN: 4,   # Jalchara (Makara = sea creature)
-    Sign.AQUARIUS: 1,    # Manava
-    Sign.PISCES: 4,      # Jalchara
-}
+from vedic_calc.compatibility.constants import (
+    GANA as _GANA,
+    GANA_NAMES as _GANA_NAMES,
+    NADI as _NADI,
+    NADI_NAMES as _NADI_NAMES,
+    VARNA as _VARNA,
+    VARNA_NAMES as _VARNA_NAMES,
+    VASHYA_GROUP as _VASHYA_GROUP,
+    YONI as _YONI,
+    YONI_ANIMAL_NAMES as _YONI_ANIMAL_NAMES,
+)
 
 # Vashya compatibility matrix: (group1, group2) -> points (0, 1, or 2)
 # Same group = 2, food chain friendly = 1, hostile = 0
@@ -77,48 +43,6 @@ _VASHYA_SCORE = {
     (3, 1): 1, (3, 2): 0, (3, 3): 2, (3, 4): 1, (3, 5): 0,
     (4, 1): 0.5, (4, 2): 0, (4, 3): 1, (4, 4): 2, (4, 5): 0,
     (5, 1): 0, (5, 2): 0, (5, 3): 0, (5, 4): 0, (5, 5): 2,
-}
-
-# YONI (physical/temperamental compatibility)
-# Each nakshatra is assigned an animal and gender (M/F).
-# Format: (animal_index, gender) where gender: 0=Male, 1=Female
-# Animals: 1=Horse, 2=Elephant, 3=Sheep, 4=Serpent, 5=Dog,
-#          6=Cat, 7=Rat, 8=Cow, 9=Buffalo, 10=Tiger,
-#          11=Deer, 12=Monkey, 13=Mongoose, 14=Lion
-_YONI = {
-    Nakshatra.ASHWINI: (1, 0),           # Horse M
-    Nakshatra.BHARANI: (2, 0),           # Elephant M
-    Nakshatra.KRITTIKA: (3, 1),          # Sheep F
-    Nakshatra.ROHINI: (4, 0),            # Serpent M
-    Nakshatra.MRIGASHIRA: (4, 1),        # Serpent F
-    Nakshatra.ARDRA: (5, 1),             # Dog F
-    Nakshatra.PUNARVASU: (6, 1),         # Cat F
-    Nakshatra.PUSHYA: (3, 0),            # Sheep M
-    Nakshatra.ASHLESHA: (6, 0),          # Cat M
-    Nakshatra.MAGHA: (7, 0),             # Rat M
-    Nakshatra.PURVA_PHALGUNI: (7, 1),    # Rat F
-    Nakshatra.UTTARA_PHALGUNI: (8, 0),   # Cow M
-    Nakshatra.HASTA: (9, 1),             # Buffalo F
-    Nakshatra.CHITRA: (10, 1),           # Tiger F
-    Nakshatra.SWATI: (9, 0),             # Buffalo M
-    Nakshatra.VISHAKHA: (10, 0),         # Tiger M
-    Nakshatra.ANURADHA: (11, 1),         # Deer F
-    Nakshatra.JYESHTHA: (11, 0),         # Deer M
-    Nakshatra.MOOLA: (5, 0),             # Dog M
-    Nakshatra.PURVA_ASHADHA: (12, 0),    # Monkey M
-    Nakshatra.UTTARA_ASHADHA: (13, 0),   # Mongoose M
-    Nakshatra.SHRAVANA: (12, 1),         # Monkey F
-    Nakshatra.DHANISHTA: (14, 1),        # Lion F
-    Nakshatra.SHATABHISHA: (1, 1),       # Horse F
-    Nakshatra.PURVA_BHADRAPADA: (14, 0), # Lion M
-    Nakshatra.UTTARA_BHADRAPADA: (8, 1), # Cow F
-    Nakshatra.REVATI: (2, 1),            # Elephant F
-}
-
-_YONI_ANIMAL_NAMES = {
-    1: "Horse", 2: "Elephant", 3: "Sheep", 4: "Serpent", 5: "Dog",
-    6: "Cat", 7: "Rat", 8: "Cow", 9: "Buffalo", 10: "Tiger",
-    11: "Deer", 12: "Monkey", 13: "Mongoose", 14: "Lion",
 }
 
 # Yoni enemy pairs — natural enemies get 0 points
@@ -160,85 +84,12 @@ _YONI_UNFRIENDLY = {
     frozenset({10, 14}),  # Tiger vs Lion
 }
 
-# GANA (temperament) — 3 types: Deva (divine), Manushya (human), Rakshasa (demon)
-_GANA = {
-    Nakshatra.ASHWINI: 1,          # Deva
-    Nakshatra.BHARANI: 1,          # Deva  (Note: some texts say Manushya)
-    Nakshatra.KRITTIKA: 3,         # Rakshasa
-    Nakshatra.ROHINI: 2,           # Manushya
-    Nakshatra.MRIGASHIRA: 1,       # Deva
-    Nakshatra.ARDRA: 2,            # Manushya
-    Nakshatra.PUNARVASU: 1,        # Deva
-    Nakshatra.PUSHYA: 1,           # Deva
-    Nakshatra.ASHLESHA: 3,         # Rakshasa
-    Nakshatra.MAGHA: 3,            # Rakshasa
-    Nakshatra.PURVA_PHALGUNI: 2,   # Manushya
-    Nakshatra.UTTARA_PHALGUNI: 2,  # Manushya
-    Nakshatra.HASTA: 1,            # Deva
-    Nakshatra.CHITRA: 3,           # Rakshasa
-    Nakshatra.SWATI: 1,            # Deva
-    Nakshatra.VISHAKHA: 3,         # Rakshasa
-    Nakshatra.ANURADHA: 1,         # Deva
-    Nakshatra.JYESHTHA: 3,         # Rakshasa
-    Nakshatra.MOOLA: 3,            # Rakshasa
-    Nakshatra.PURVA_ASHADHA: 2,    # Manushya
-    Nakshatra.UTTARA_ASHADHA: 2,   # Manushya
-    Nakshatra.SHRAVANA: 1,         # Deva
-    Nakshatra.DHANISHTA: 3,        # Rakshasa
-    Nakshatra.SHATABHISHA: 3,      # Rakshasa
-    Nakshatra.PURVA_BHADRAPADA: 2, # Manushya
-    Nakshatra.UTTARA_BHADRAPADA: 2,# Manushya
-    Nakshatra.REVATI: 1,           # Deva
-}
-
-_GANA_NAMES = {1: "Deva", 2: "Manushya", 3: "Rakshasa"}
-
 # Gana compatibility: (groom_gana, bride_gana) -> points
 _GANA_SCORE = {
     (1, 1): 6, (1, 2): 6, (1, 3): 1,
     (2, 1): 5, (2, 2): 6, (2, 3): 0,
     (3, 1): 1, (3, 2): 0, (3, 3): 6,
 }
-
-# NADI (health/constitution) — 3 types: Aadi (Vata), Madhya (Pitta), Antya (Kapha)
-# Same nadi = 0 points (dosham — health risk), different = 8 points
-# Pattern is zigzag 1-2-3-3-2-1 repeating every 6 nakshatras (BPHS standard).
-_NADI = {
-    # Group 1 (1-6)
-    Nakshatra.ASHWINI: 1,           # Aadi (Vata)
-    Nakshatra.BHARANI: 2,           # Madhya (Pitta)
-    Nakshatra.KRITTIKA: 3,          # Antya (Kapha)
-    Nakshatra.ROHINI: 3,            # Antya
-    Nakshatra.MRIGASHIRA: 2,        # Madhya
-    Nakshatra.ARDRA: 1,             # Aadi
-    # Group 2 (7-12)
-    Nakshatra.PUNARVASU: 1,         # Aadi
-    Nakshatra.PUSHYA: 2,            # Madhya
-    Nakshatra.ASHLESHA: 3,          # Antya
-    Nakshatra.MAGHA: 3,             # Antya
-    Nakshatra.PURVA_PHALGUNI: 2,    # Madhya
-    Nakshatra.UTTARA_PHALGUNI: 1,   # Aadi
-    # Group 3 (13-18)
-    Nakshatra.HASTA: 1,             # Aadi
-    Nakshatra.CHITRA: 2,            # Madhya
-    Nakshatra.SWATI: 3,             # Antya
-    Nakshatra.VISHAKHA: 3,          # Antya
-    Nakshatra.ANURADHA: 2,          # Madhya
-    Nakshatra.JYESHTHA: 1,          # Aadi
-    # Group 4 (19-24)
-    Nakshatra.MOOLA: 1,             # Aadi
-    Nakshatra.PURVA_ASHADHA: 2,     # Madhya
-    Nakshatra.UTTARA_ASHADHA: 3,    # Antya
-    Nakshatra.SHRAVANA: 3,          # Antya
-    Nakshatra.DHANISHTA: 2,         # Madhya
-    Nakshatra.SHATABHISHA: 1,       # Aadi
-    # Group 5 (25-27)
-    Nakshatra.PURVA_BHADRAPADA: 1,  # Aadi
-    Nakshatra.UTTARA_BHADRAPADA: 2, # Madhya
-    Nakshatra.REVATI: 3,            # Antya
-}
-
-_NADI_NAMES = {1: "Aadi (Vata)", 2: "Madhya (Pitta)", 3: "Antya (Kapha)"}
 
 # GRAHA MAITRI — planetary friendship table
 # 0=enemy, 1=neutral, 2=friend

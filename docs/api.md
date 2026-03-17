@@ -64,9 +64,11 @@ for p in periods:
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `chart` | `BirthChart` | required | A calculated birth chart |
-| `levels` | `int` | `2` | Depth: 1=mahadasha, 2=+antardasha, 3=+pratyantardasha |
+| `levels` | `int` | `2` | Depth: 1=mahadasha, 2=+antardasha, 3=+pratyantardasha, 4=+sookshmadasha, 5=+pranadasha |
 
 **Returns:** `list[DashaPeriod]` — flat list sorted chronologically, with `level` field to distinguish depths.
+
+> **Note:** levels=4 adds sookshmadashas (9^4 = 6,561 periods) and levels=5 adds pranadashas (9^5 = 59,049 periods). `get_current_dasha()` also supports `levels=1..5`.
 
 ### `get_current_dasha()`
 
@@ -131,6 +133,38 @@ print(f"Sunset:    {p.sunset}")
 | `ayanamsa` | `Ayanamsa` | `LAHIRI` | Precession correction mode |
 
 **Returns:** `PanchangaInfo`
+
+### `calculate_panchanga_transitions()`
+
+Find exact times when tithi, nakshatra, yoga, and karana change during a Vedic day (sunrise to next sunrise).
+
+```python
+from vedic_calc import calculate_panchanga_transitions
+
+t = calculate_panchanga_transitions(
+    year=2026, month=3, day=8,
+    latitude=19.076, longitude=72.878,
+    timezone_offset=5.5,
+)
+
+print(f"Sunrise: {t.sunrise}")
+for m in t.transitions:
+    print(f"  {m.transition_time.strftime('%H:%M')} — {m.element}: {m.from_name} → {m.to_name}")
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `year` | `int` | required | Calendar year |
+| `month` | `int` | required | Month (1-12) |
+| `day` | `int` | required | Day (1-31) |
+| `latitude` | `float` | required | Geographic latitude |
+| `longitude` | `float` | required | Geographic longitude |
+| `timezone_offset` | `float` | `0.0` | UTC offset in hours |
+| `ayanamsa` | `Ayanamsa` | `LAHIRI` | Precession correction mode |
+
+**Returns:** `PanchangaTransitions` — with `sunrise`, `next_sunrise`, and sorted `transitions` list of `TransitionMoment` objects.
 
 ---
 
@@ -471,6 +505,32 @@ for planet, pos in transit.planets.items():
 
 **Returns:** `TransitChart`
 
+### `calculate_event_timeline()`
+
+Calculate a chronological timeline of major astrological events: dasha transitions, Sade Sati phases, Saturn returns, Jupiter transits over natal Moon, and Rahu-Ketu returns.
+
+```python
+from vedic_calc import calculate_chart, calculate_event_timeline
+from datetime import datetime
+
+chart = calculate_chart(1990, 3, 15, 10, 30, 0, 19.076, 72.878, 5.5)
+timeline = calculate_event_timeline(chart, datetime(1990, 1, 1), datetime(2050, 1, 1))
+
+for event in timeline.events:
+    print(f"{event.date.date()} [{event.event_type}] {event.description}")
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `chart` | `BirthChart` | required | A calculated birth chart |
+| `start_date` | `datetime` | required | Start of the timeline range |
+| `end_date` | `datetime` | required | End of the timeline range |
+| `ayanamsa` | `Ayanamsa` | `LAHIRI` | Ayanamsa for transit calculations |
+
+**Returns:** `EventTimeline` — with sorted `events` list of `TimelineEvent` objects (each with `event_type`, `date`, `description`, `details`).
+
 ---
 
 ## Yogas
@@ -491,6 +551,31 @@ for y in yogas:
 ```
 
 **Returns:** `list[YogaResult]` — includes both present and absent yogas.
+
+### `score_yogas()`
+
+Score every detected yoga on a 0-100 strength scale, weighted by planetary dignity, Shadbala, combustion, retrograde status, and house placement.
+
+```python
+from vedic_calc import calculate_chart, score_yogas
+
+chart = calculate_chart(1990, 3, 15, 10, 30, 0, 19.076, 72.878, 5.5)
+scored = score_yogas(chart)
+
+for y in scored:
+    if y.is_present:
+        print(f"{y.name}: strength={y.strength}/100")
+        for f in y.factors:
+            print(f"  {f.name}: {f.description}")
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `chart` | `BirthChart` | required | A calculated birth chart |
+
+**Returns:** `list[ScoredYogaResult]` — with `strength` (0-100) and `factors` breakdown.
 
 ---
 
@@ -513,6 +598,31 @@ for d in doshas:
 ```
 
 **Returns:** `list[DoshaResult]` — with is_present, is_cancelled, severity, description.
+
+### `score_doshas()`
+
+Score every detected dosha on a 0-100 severity scale, refined by cancellation factors, afflicting-planet Shadbala, and house placement.
+
+```python
+from vedic_calc import calculate_chart, score_doshas
+
+chart = calculate_chart(1990, 3, 15, 10, 30, 0, 19.076, 72.878, 5.5)
+scored = score_doshas(chart)
+
+for d in scored:
+    if d.is_present:
+        print(f"{d.name}: severity={d.severity_score}/100")
+        for f in d.factors:
+            print(f"  {f.name}: {f.description}")
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `chart` | `BirthChart` | required | A calculated birth chart |
+
+**Returns:** `list[ScoredDoshaResult]` — with `severity_score` (0-100) and `factors` breakdown.
 
 ---
 
@@ -546,6 +656,31 @@ result = calculate_porutham(chart1, chart2)
 ```
 
 **Returns:** `PoruthamResult` — 10 factor results + summary.
+
+### `calculate_papasamyam()`
+
+Compare malefic balance between two charts (South Indian compatibility check). Scores malefic planets in houses 1,2,4,7,8,12 from Lagna, Moon, and Venus.
+
+```python
+from vedic_calc import calculate_chart, calculate_papasamyam
+
+chart1 = calculate_chart(1990, 3, 15, 10, 30, 0, 19.076, 72.878, 5.5)
+chart2 = calculate_chart(1992, 7, 20, 14, 0, 0, 19.076, 72.878, 5.5)
+
+result = calculate_papasamyam(chart1, chart2)
+print(f"Person 1: {result.person1.total:.1f} pts, Person 2: {result.person2.total:.1f} pts")
+print(f"Balanced: {result.is_balanced}")
+print(result.description)
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `chart1` | `BirthChart` | required | First person's birth chart |
+| `chart2` | `BirthChart` | required | Second person's birth chart |
+
+**Returns:** `PapasamyamResult` — with `person1`/`person2` scores (lagna/moon/venus breakdown), `is_balanced`, `difference`, and `description`.
 
 ---
 
@@ -741,6 +876,32 @@ for md in varsha.mudda_dasha[:3]:
 
 **Returns:** `VarshaphalResult` — with annual chart, muntha, year lord, and mudda dasha periods.
 
+> **Note:** Mudda Dasha periods support `levels` internally: level 1 = mudda dashas, level 2 = mudda antardashas.
+
+### `calculate_panchavargeeya_bala()`
+
+Calculate 5-fold dignity strength across D1 (Rasi), D2 (Hora), D3 (Drekkana), D9 (Navamsa), and D12 (Dwadasamsa). Total points range 0-20.
+
+```python
+from vedic_calc import calculate_chart, calculate_varshaphal, calculate_panchavargeeya_bala
+
+birth = calculate_chart(1990, 3, 15, 10, 30, 0, 19.076, 72.878, 5.5)
+varsha = calculate_varshaphal(birth, year=2026)
+bala = calculate_panchavargeeya_bala(varsha.annual_chart)
+
+for b in bala:
+    print(f"{b.planet.name}: D1={b.d1_dignity} D2={b.d2_dignity} D3={b.d3_dignity} "
+          f"D9={b.d9_dignity} D12={b.d12_dignity} → {b.total_points}/20")
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `annual_chart` | `BirthChart` | required | An annual (solar return) chart |
+
+**Returns:** `list[PanchavargeeaBala]` — 9 entries with per-division dignity strings and `total_points`.
+
 ---
 
 ## KP (Krishnamurti Paddhati)
@@ -775,6 +936,52 @@ print(f"Star lord: {info.star_lord.name}, Sub-lord: {info.sub_lord.name}")
 
 **Returns:** `KPSublordInfo`
 
+### `get_kp_significators()`
+
+Get per-planet KP significators at 4 levels (occupation, star-lord connection, ownership, star-lord ownership).
+
+```python
+from vedic_calc import calculate_chart, get_kp_significators
+
+chart = calculate_chart(1990, 3, 15, 10, 30, 0, 19.076, 72.878, 5.5)
+sigs = get_kp_significators(chart)
+
+for s in sigs:
+    print(f"{s.planet.name}: L1={s.level1_houses} L2={s.level2_houses} "
+          f"L3={s.level3_houses} L4={s.level4_houses} → {s.all_signified_houses}")
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `chart` | `BirthChart` | required | A calculated birth chart |
+
+**Returns:** `list[KPSignificatorDetail]` — 9 entries (one per planet) with `level1_houses` through `level4_houses` and `all_signified_houses`.
+
+### `get_kp_house_significators()`
+
+Get per-house significator planets (which planets signify each house).
+
+```python
+from vedic_calc import calculate_chart, get_kp_house_significators
+
+chart = calculate_chart(1990, 3, 15, 10, 30, 0, 19.076, 72.878, 5.5)
+house_sigs = get_kp_house_significators(chart)
+
+for h in house_sigs:
+    names = [p.name for p in h.significators]
+    print(f"House {h.house_number}: {', '.join(names)}")
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `chart` | `BirthChart` | required | A calculated birth chart |
+
+**Returns:** `list[KPHouseSignificators]` — 12 entries with `house_number` and `significators` (list of planets).
+
 ---
 
 ## Numerology
@@ -798,6 +1005,35 @@ print(f"Lucky numbers: {result.lucky_numbers}")
 ```
 
 **Returns:** `NumerologyResult` — with destiny, radical, name numbers, lucky/unlucky numbers, and compatibility.
+
+---
+
+## Sudarshana Chakra
+
+### `calculate_sudarshana_chakra()`
+
+Calculate the Sudarshana Chakra — a three-ring concentric chart from Lagna, Moon, and Sun reference points.
+
+```python
+from vedic_calc import calculate_chart, calculate_sudarshana_chakra
+
+chart = calculate_chart(1990, 3, 15, 10, 30, 0, 19.076, 72.878, 5.5)
+chakra = calculate_sudarshana_chakra(chart)
+
+for ring_name, ring in [("Lagna", chakra.lagna_ring), ("Moon", chakra.moon_ring), ("Sun", chakra.sun_ring)]:
+    print(f"\n{ring_name} Ring:")
+    for h in ring:
+        planets = [p.name for p in h.planets]
+        print(f"  House {h.house_number}: {h.sign.name} {planets or ''}")
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `chart` | `BirthChart` | required | A calculated birth chart |
+
+**Returns:** `SudarshanaChakra` — with `lagna_ring`, `moon_ring`, and `sun_ring` (each a list of 12 `SudarshanaHouse` objects).
 
 ---
 

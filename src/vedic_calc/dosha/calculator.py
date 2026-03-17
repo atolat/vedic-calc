@@ -23,40 +23,8 @@ Source: Brihat Parashara Hora Shastra, Phaladeepika, Jataka Parijata.
 from __future__ import annotations
 
 from vedic_calc.core.constants import KENDRA_HOUSES, Planet, Sign, SIGN_LORDS
+from vedic_calc.core.helpers import planet_house as _planet_house, sign_distance as _sign_distance
 from vedic_calc.core.types import BirthChart, DoshaResult
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _planet_house(chart: BirthChart, planet: Planet) -> int:
-    """Get the house number (1-12) where a planet is placed.
-
-    Uses whole-sign houses: the planet's sign is matched against
-    the sign occupying each house.
-
-    Args:
-        chart: The birth chart.
-        planet: The planet to locate.
-
-    Returns:
-        House number (1-12). Defaults to 1 if not found (should not happen
-        with a valid chart).
-    """
-    planet_sign = chart.planets[planet].sign
-    for house in chart.houses:
-        if house.sign == planet_sign:
-            return house.house_number
-    return 1  # pragma: no cover
-
-
-def _sign_distance(from_sign: Sign, to_sign: Sign) -> int:
-    """Inclusive Jyotish count from one sign to another (1-12).
-
-    Aries to Aries = 1, Aries to Taurus = 2, etc.
-    """
-    return ((to_sign - from_sign) % 12) + 1
 
 
 def _is_in_same_sign(chart: BirthChart, planet1: Planet, planet2: Planet) -> bool:

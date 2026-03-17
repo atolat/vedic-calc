@@ -38,30 +38,12 @@ from vedic_calc.core.types import BirthChart, YogaResult
 # Helper utilities
 # ---------------------------------------------------------------------------
 
-def _planet_house(chart: BirthChart, planet: Planet) -> int:
-    """Get the house number (1-12) where a planet is placed.
-
-    Uses the whole-sign house system: the planet's sign is matched against
-    the sign assigned to each house.
-    """
-    planet_sign = chart.planets[planet].sign
-    for house in chart.houses:
-        if house.sign == planet_sign:
-            return house.house_number
-    return 1  # fallback — should never happen with valid chart data
+from vedic_calc.core.helpers import planet_house as _planet_house, sign_distance as _sign_distance
 
 
 def _planets_in_same_sign(chart: BirthChart, p1: Planet, p2: Planet) -> bool:
     """Check whether two planets occupy the same zodiac sign."""
     return chart.planets[p1].sign == chart.planets[p2].sign
-
-
-def _sign_distance(from_sign: Sign, to_sign: Sign) -> int:
-    """Count signs from ``from_sign`` to ``to_sign`` (1-indexed, inclusive).
-
-    Example: Aries to Cancer → 4 (Aries=1, Taurus=2, Gemini=3, Cancer=4).
-    """
-    return ((int(to_sign) - int(from_sign)) % 12) + 1
 
 
 def _house_lord(chart: BirthChart, house_number: int) -> Planet:

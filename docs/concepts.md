@@ -778,6 +778,78 @@ Most festivals are **tithi-based** (e.g., Krishna Janmashtami = Krishna Paksha A
 
 ---
 
+## Sade Sati (Saturn's 7.5-year cycle)
+
+Saturn transiting the 12th, 1st, and 2nd houses from natal Moon. Three phases: Rising (12th), Peak (same sign), Setting (2nd). Major life transformation period. ~29.5-year Saturn orbit means 2-3 occurrences per lifetime.
+
+**Code:** `calculate_sade_sati()`, `calculate_sade_sati_periods()`
+
+---
+
+## Chandrashtama (Moon's inauspicious transit)
+
+When the transiting Moon passes through the 8th sign from natal Moon (~2.25 days every ~27 days). Considered inauspicious for important activities.
+
+**Code:** `calculate_chandrashtama()`
+
+---
+
+## Planet Relationships (Panchadha Maitri)
+
+5-fold classification: natural friendship (from BPHS) + temporal friendship (based on current chart placement) = compound relationship. Levels: great friend, friend, neutral, enemy, great enemy.
+
+**Code:** `calculate_planet_relationships()`
+
+---
+
+## Panchanga Transitions
+
+Exact times when tithi/nakshatra/yoga/karana change during a Vedic day (sunrise to next sunrise). Uses bisection search on Moon/Sun longitudes. Neither commercial API exposes this.
+
+**Code:** `calculate_panchanga_transitions()`
+
+---
+
+## Yoga & Dosha Scoring
+
+Probabilistic strength assessment (0-100) for detected yogas and doshas. Factors: planetary dignity, shadbala ratio, combustion, retrograde status, house placement, cancellation count. Unlike commercial APIs which return binary yes/no.
+
+**Code:** `score_yogas()`, `score_doshas()`
+
+---
+
+## Event Timeline
+
+Chronological life events combining multiple calculation systems: dasha transitions, Sade Sati entry/exit, Saturn returns (~29.5yr), Jupiter over natal Moon (~12yr), Rahu-Ketu axis returns (~18.6yr). No commercial API offers a unified timeline.
+
+**Code:** `calculate_event_timeline()`
+
+---
+
+## Sudarshana Chakra
+
+Three concentric rings viewing the chart from Lagna, Moon, and Sun as ascendants. Each ring provides 12 houses. Used for annual prediction — Lagna ring for body/self, Moon ring for mind/emotions, Sun ring for soul/status.
+
+**Code:** `calculate_sudarshana_chakra()`
+
+---
+
+## Papasamyam (Malefic Balance)
+
+Compatibility check that totals malefic influence on houses {1,2,4,7,8,12} for each partner. If the difference exceeds a threshold, the pairing is considered unbalanced. Natural malefics: Sun (0.5), Mars (1), Saturn (1), Rahu (1), Ketu (0.5).
+
+**Code:** `calculate_papasamyam()`
+
+---
+
+## Panchavargeeya Bala
+
+5-fold dignity strength for Varshaphal. Evaluates each planet across D1 (Rasi), D2 (Hora), D3 (Drekkana), D9 (Navamsa), D12 (Dwadasamsa). Points: exalted=4, moolatrikona=3.5, own=3, friend=2, neutral=1.5, enemy=1, debilitated=0.5. Max 20 points.
+
+**Code:** `calculate_panchavargeeya_bala()`
+
+---
+
 ## The Code Architecture
 
 Here's how these concepts map to the codebase:

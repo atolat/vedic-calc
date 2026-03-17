@@ -50,7 +50,50 @@ from vedic_calc.core.ephemeris import (
     get_sunrise_sunset,
     jd_to_datetime,
 )
-from vedic_calc.core.types import PanchangaInfo
+from vedic_calc.core.types import AnandadiYogaInfo, PanchangaInfo
+
+
+# ---------------------------------------------------------------------------
+# Anandadi Yoga constants
+# ---------------------------------------------------------------------------
+
+ANANDADI_YOGAS: dict[str, tuple[str, str]] = {
+    "Ananda": ("auspicious", "Joy and happiness"),
+    "Kaldanda": ("inauspicious", "Punishment and suffering"),
+    "Dhoomra": ("inauspicious", "Confusion and smoky results"),
+    "Chora": ("inauspicious", "Theft and loss"),
+    "Roga": ("inauspicious", "Disease and illness"),
+    "Kala": ("inauspicious", "Death-like suffering"),
+    "Siddha": ("auspicious", "Success and accomplishment"),
+    "Subha": ("auspicious", "Auspiciousness and good fortune"),
+}
+
+
+def get_anandadi_yoga(tithi_number: int, weekday: int) -> AnandadiYogaInfo:
+    """Get the Anandadi Yoga for a tithi-weekday combination.
+
+    Anandadi Yoga is determined by combining the tithi (lunar day) with
+    the weekday. There are 8 yogas, 3 auspicious and 5 inauspicious.
+
+    Args:
+        tithi_number: Tithi number (1-30).
+        weekday: Python weekday (0=Monday, 6=Sunday).
+
+    Returns:
+        AnandadiYogaInfo with yoga name, quality, and description.
+
+    Example:
+        >>> info = get_anandadi_yoga(1, 0)  # Pratipada on Monday
+        >>> info.yoga_name
+        'Ananda'
+    """
+    _PY_TO_INDIAN_WEEKDAY = {0: 2, 1: 3, 2: 4, 3: 5, 4: 6, 5: 7, 6: 1}
+    indian_weekday = _PY_TO_INDIAN_WEEKDAY[weekday]
+    yoga_index = (tithi_number + indian_weekday - 2) % 8
+    yoga_names = ["Ananda", "Kaldanda", "Dhoomra", "Chora", "Roga", "Kala", "Siddha", "Subha"]
+    yoga_name = yoga_names[yoga_index]
+    quality, description = ANANDADI_YOGAS[yoga_name]
+    return AnandadiYogaInfo(yoga_name=yoga_name, quality=quality, description=description)
 
 
 def calculate_panchanga(

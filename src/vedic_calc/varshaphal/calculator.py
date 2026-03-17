@@ -29,7 +29,11 @@ import swisseph as swe
 
 from vedic_calc.core.constants import (
     Ayanamsa,
+    DEBILITATION,
+    EXALTATION,
+    MOOLATRIKONA,
     Nakshatra,
+    PLANET_FRIENDSHIP,
     Planet,
     Sign,
     NAKSHATRA_LORDS,
@@ -48,10 +52,12 @@ from vedic_calc.core.ephemeris import (
     get_planet_longitude,
 )
 from vedic_calc.chart.calculator import calculate_chart
+from vedic_calc.chart.divisional import calculate_divisional_chart
 from vedic_calc.core.types import (
     BirthChart,
     DashaPeriod,
     MunthaInfo,
+    PanchavargeeaBala,
     VarshaphalResult,
 )
 
@@ -307,6 +313,7 @@ def _determine_year_lord(
 def _calculate_mudda_dasha(
     annual_chart: BirthChart,
     solar_return_dt: datetime,
+    levels: int = 1,
 ) -> list[DashaPeriod]:
     """Calculate Mudda Dasha periods for the annual chart.
 
@@ -320,6 +327,7 @@ def _calculate_mudda_dasha(
     Args:
         annual_chart: The annual (solar return) chart.
         solar_return_dt: The datetime of the solar return.
+        levels: 1 = mahadasha only, 2 = + antardashas.
 
     Returns:
         List of DashaPeriod objects for the Mudda Dasha periods.
@@ -330,7 +338,6 @@ def _calculate_mudda_dasha(
 
     # Elapsed fraction of the first dasha period
     elapsed_fraction = nak_info.degree_in_nakshatra / NAKSHATRA_SPAN
-    remaining_fraction = 1.0 - elapsed_fraction
 
     # Build the dasha sequence starting from the Moon's nakshatra lord
     idx = VIMSOTTARI_ORDER.index(starting_lord)
@@ -343,7 +350,7 @@ def _calculate_mudda_dasha(
     elapsed_days = first_full_days * elapsed_fraction
     current_start = solar_return_dt - timedelta(days=elapsed_days)
 
-    for i, lord in enumerate(sequence):
+    for lord in sequence:
         full_days = (VIMSOTTARI_YEARS[lord] / VIMSOTTARI_TOTAL_YEARS) * _DAYS_PER_YEAR
         duration_days = full_days
         duration_years = duration_days / _DAYS_PER_YEAR
@@ -358,9 +365,157 @@ def _calculate_mudda_dasha(
             duration_years=round(duration_years, 6),
         ))
 
+        # ─── Mudda Dasha Antardashas (sub-periods) ───
+        if levels >= 2:
+            antar_start = current_start
+            # Sub-period sequence starts from the mahadasha lord
+            antar_idx = VIMSOTTARI_ORDER.index(lord)
+            antar_sequence = VIMSOTTARI_ORDER[antar_idx:] + VIMSOTTARI_ORDER[:antar_idx]
+
+            for antar_lord in antar_sequence:
+                antar_days = duration_days * (
+                    VIMSOTTARI_YEARS[antar_lord] / VIMSOTTARI_TOTAL_YEARS
+                )
+                antar_years = antar_days / _DAYS_PER_YEAR
+                antar_end = antar_start + timedelta(days=antar_days)
+
+                periods.append(DashaPeriod(
+                    lord=antar_lord,
+                    level="mudda_antardasha",
+                    start=antar_start,
+                    end=antar_end,
+                    duration_years=round(antar_years, 6),
+                ))
+
+                antar_start = antar_end
+
         current_start = end
 
     return periods
+
+
+# ---------------------------------------------------------------------------
+# Panchavargeeya Bala (5-fold dignity strength)
+# ---------------------------------------------------------------------------
+
+# Dignity scoring: points for each dignity level
+_DIGNITY_POINTS: dict[str, float] = {
+    "exalted": 4.0,
+    "moolatrikona": 3.5,
+    "own": 3.0,
+    "friend": 2.0,
+    "neutral": 1.5,
+    "enemy": 1.0,
+    "debilitated": 0.5,
+}
+
+
+def _get_dignity(planet: Planet, sign: Sign) -> str:
+    """Determine the dignity of a planet in a given sign.
+
+    Checks in order: exalted, debilitated, moolatrikona, own sign,
+    then uses the friendship table for friend/neutral/enemy.
+
+    Args:
+        planet: The planet to check.
+        sign: The sign the planet is placed in.
+
+    Returns:
+        One of: "exalted", "moolatrikona", "own", "friend", "neutral",
+                "enemy", "debilitated".
+    """
+    # Check exaltation (sign match only — degree ignored for varga dignity)
+    if planet in EXALTATION and EXALTATION[planet][0] == sign:
+        return "exalted"
+
+    # Check debilitation
+    if planet in DEBILITATION and DEBILITATION[planet][0] == sign:
+        return "debilitated"
+
+    # Check moolatrikona (sign match only for varga assessment)
+    if planet in MOOLATRIKONA and MOOLATRIKONA[planet][0] == sign:
+        return "moolatrikona"
+
+    # Check own sign
+    sign_lord = SIGN_LORDS[sign]
+    if sign_lord == planet:
+        return "own"
+
+    # Use friendship table for classical planets
+    if planet in PLANET_FRIENDSHIP and sign_lord in PLANET_FRIENDSHIP.get(planet, {}):
+        friendship = PLANET_FRIENDSHIP[planet][sign_lord]
+        if friendship == 2:
+            return "friend"
+        elif friendship == 1:
+            return "neutral"
+        else:
+            return "enemy"
+
+    # Rahu/Ketu: treat as neutral by default
+    return "neutral"
+
+
+def calculate_panchavargeeya_bala(
+    annual_chart: BirthChart,
+) -> list[PanchavargeeaBala]:
+    """Calculate Panchavargeeya Bala (5-fold dignity strength) for annual chart planets.
+
+    Evaluates each planet's dignity in 5 divisional charts:
+    D1 (Rasi), D2 (Hora), D3 (Drekkana), D9 (Navamsa), D12 (Dwadasamsa).
+
+    Total points range from 0 to 20 (5 divisions x max 4 points each).
+
+    Args:
+        annual_chart: The annual (solar return) chart.
+
+    Returns:
+        List of PanchavargeeaBala objects, one per planet.
+    """
+    # Calculate the 5 divisional charts
+    d2 = calculate_divisional_chart(annual_chart, 2)
+    d3 = calculate_divisional_chart(annual_chart, 3)
+    d9 = calculate_divisional_chart(annual_chart, 9)
+    d12 = calculate_divisional_chart(annual_chart, 12)
+
+    results: list[PanchavargeeaBala] = []
+
+    for planet in Planet:
+        # D1: use the planet's sign from the annual chart itself
+        d1_sign = annual_chart.planets[planet].sign
+        d1_dignity = _get_dignity(planet, d1_sign)
+
+        # D2, D3, D9, D12: use the divisional chart planet-sign mapping
+        d2_sign = d2.planets[planet]
+        d2_dignity = _get_dignity(planet, d2_sign)
+
+        d3_sign = d3.planets[planet]
+        d3_dignity = _get_dignity(planet, d3_sign)
+
+        d9_sign = d9.planets[planet]
+        d9_dignity = _get_dignity(planet, d9_sign)
+
+        d12_sign = d12.planets[planet]
+        d12_dignity = _get_dignity(planet, d12_sign)
+
+        total = (
+            _DIGNITY_POINTS[d1_dignity]
+            + _DIGNITY_POINTS[d2_dignity]
+            + _DIGNITY_POINTS[d3_dignity]
+            + _DIGNITY_POINTS[d9_dignity]
+            + _DIGNITY_POINTS[d12_dignity]
+        )
+
+        results.append(PanchavargeeaBala(
+            planet=planet,
+            d1_dignity=d1_dignity,
+            d2_dignity=d2_dignity,
+            d3_dignity=d3_dignity,
+            d9_dignity=d9_dignity,
+            d12_dignity=d12_dignity,
+            total_points=round(total, 1),
+        ))
+
+    return results
 
 
 # ---------------------------------------------------------------------------

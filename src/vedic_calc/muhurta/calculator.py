@@ -43,7 +43,52 @@ from vedic_calc.core.ephemeris import (
     get_sunrise_sunset,
     jd_to_datetime,
 )
-from vedic_calc.core.types import MuhurtaInfo
+from vedic_calc.core.types import DishaShoolInfo, MuhurtaInfo
+
+
+# ---------------------------------------------------------------------------
+# Disha Shool (inauspicious travel direction by weekday)
+# ---------------------------------------------------------------------------
+# Weekday (Python): 0=Monday, 1=Tuesday, ..., 6=Sunday
+DISHA_SHOOL: dict[int, str] = {
+    0: "East",    # Monday
+    1: "North",   # Tuesday
+    2: "North",   # Wednesday
+    3: "South",   # Thursday
+    4: "West",    # Friday
+    5: "East",    # Saturday
+    6: "South",   # Sunday
+}
+
+
+def get_disha_shool(year: int, month: int, day: int) -> DishaShoolInfo:
+    """Get the Disha Shool (inauspicious travel direction) for a given date.
+
+    Disha Shool specifies which cardinal direction is inauspicious for
+    travel on each weekday. It is a simple weekday-based lookup used
+    in Muhurta (electional astrology) planning.
+
+    Args:
+        year: Calendar year.
+        month: Month (1-12).
+        day: Day of month (1-31).
+
+    Returns:
+        DishaShoolInfo with weekday name, direction, and description.
+
+    Example:
+        >>> info = get_disha_shool(2026, 3, 12)  # Thursday
+        >>> info.direction
+        'South'
+    """
+    weekday = datetime(year, month, day).weekday()
+    weekday_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    direction = DISHA_SHOOL[weekday]
+    return DishaShoolInfo(
+        weekday=weekday_names[weekday],
+        direction=direction,
+        description=f"Avoid travelling towards {direction} on {weekday_names[weekday]}.",
+    )
 
 
 def _inauspicious_window(

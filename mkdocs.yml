@@ -56,5 +56,6 @@ nav:
   - Architecture: architecture.md
   - API Reference: api.md
   - Accuracy & Testing: accuracy.md
+  - API Benchmarks: benchmarks.md
   - PyJHora Comparison: comparison.md
   - Contributing: contributing.md

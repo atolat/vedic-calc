@@ -39,3 +39,8 @@ packages = ["src/vedic_calc"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+]

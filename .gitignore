@@ -7,3 +7,5 @@ dist/
 .coverage
 htmlcov/
 site/
+.env
+reports/

@@ -115,7 +115,8 @@ def calculate_dasha(
         1. Get Moon's nakshatra info from the birth chart
         2. Determine how much of the first mahadasha remains at birth
         3. Generate the 9 mahadasha periods (120 years total)
-        4. Optionally subdivide each into antardashas and pratyantardashas
+        4. Optionally subdivide into antardashas, pratyantardashas,
+           sookshmadashas, and pranadashas
 
     Args:
         chart: A calculated BirthChart (from calculate_chart()).
@@ -123,11 +124,14 @@ def calculate_dasha(
                 1 = mahadashas only (9 periods)
                 2 = + antardashas (9 × 9 = 81 sub-periods)
                 3 = + pratyantardashas (9 × 9 × 9 = 729 sub-sub-periods)
+                4 = + sookshmadashas (9^4 = 6561 periods)
+                5 = + pranadashas (9^5 = 59049 periods)
 
     Returns:
         Flat list of DashaPeriod objects, sorted chronologically.
         Each period has a `level` field ("mahadasha", "antardasha",
-        or "pratyantardasha") to distinguish the levels.
+        "pratyantardasha", "sookshmadasha", or "pranadasha") to
+        distinguish the levels.
 
     Example:
         >>> chart = calculate_chart(1990, 3, 15, 10, 30, 0, 19.076, 72.878, 5.5)
@@ -219,6 +223,50 @@ def calculate_dasha(
                             end=prat_end,
                             duration_years=round(prat_years, 6),
                         ))
+
+                        # ─── Step 7: Generate sookshmadashas (if requested) ───
+                        if levels >= 4:
+                            sookshma_start = prat_start
+                            sookshma_sequence = _sub_period_sequence(prat_lord)
+
+                            for sookshma_lord in sookshma_sequence:
+                                sookshma_years = prat_years * (
+                                    VIMSOTTARI_YEARS[sookshma_lord] / VIMSOTTARI_TOTAL_YEARS
+                                )
+                                sookshma_days = sookshma_years * _DAYS_PER_YEAR
+                                sookshma_end = sookshma_start + timedelta(days=sookshma_days)
+
+                                periods.append(DashaPeriod(
+                                    lord=sookshma_lord,
+                                    level="sookshmadasha",
+                                    start=sookshma_start,
+                                    end=sookshma_end,
+                                    duration_years=round(sookshma_years, 6),
+                                ))
+
+                                # ─── Step 8: Generate pranadashas (if requested) ───
+                                if levels >= 5:
+                                    prana_start = sookshma_start
+                                    prana_sequence = _sub_period_sequence(sookshma_lord)
+
+                                    for prana_lord in prana_sequence:
+                                        prana_years = sookshma_years * (
+                                            VIMSOTTARI_YEARS[prana_lord] / VIMSOTTARI_TOTAL_YEARS
+                                        )
+                                        prana_days = prana_years * _DAYS_PER_YEAR
+                                        prana_end = prana_start + timedelta(days=prana_days)
+
+                                        periods.append(DashaPeriod(
+                                            lord=prana_lord,
+                                            level="pranadasha",
+                                            start=prana_start,
+                                            end=prana_end,
+                                            duration_years=round(prana_years, 6),
+                                        ))
+                                        prana_start = prana_end
+
+                                sookshma_start = sookshma_end
+
                         prat_start = prat_end
 
                 antar_start = antar_end
@@ -235,14 +283,15 @@ def get_current_dasha(
 ) -> list[DashaPeriod]:
     """Get the active dasha periods for a specific date.
 
-    Returns the mahadasha, antardasha, and pratyantardasha that are active
-    on the given date. This is what astrologers mean when they say "you're
-    currently running Jupiter-Saturn-Mercury dasha".
+    Returns the mahadasha, antardasha, pratyantardasha, sookshmadasha,
+    and pranadasha that are active on the given date. This is what
+    astrologers mean when they say "you're currently running
+    Jupiter-Saturn-Mercury dasha".
 
     Args:
         chart: A calculated BirthChart.
         date: The date to check (defaults to now).
-        levels: How many levels to return (1-3).
+        levels: How many levels to return (1-5).
 
     Returns:
         List of active DashaPeriod objects, one per level.
@@ -261,7 +310,7 @@ def get_current_dasha(
     all_periods = calculate_dasha(chart, levels=levels)
 
     active: list[DashaPeriod] = []
-    level_names = ["mahadasha", "antardasha", "pratyantardasha"]
+    level_names = ["mahadasha", "antardasha", "pratyantardasha", "sookshmadasha", "pranadasha"]
 
     for level_name in level_names[:levels]:
         for period in all_periods:

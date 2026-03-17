@@ -13,21 +13,29 @@ vedic-calc follows a layered architecture with strict dependency boundaries. Eve
 │               calculate_combustion()  calculate_planet_states()     │
 │               analyze_houses()  calculate_transit_chart()           │
 │               calculate_special_lagnas()  calculate_upagrahas()     │
-│               calculate_sahams()                                    │
+│               calculate_sahams()  calculate_sade_sati()             │
+│               calculate_chandrashtama()  calculate_functional_nature()│
+│               calculate_chalit_chart()  calculate_sudarshana_chakra()│
+│               calculate_event_timeline()                            │
 │                                                                     │
 │  Dasha        calculate_dasha()  get_current_dasha()                │
 │               calculate_yogini_dasha()  calculate_ashtottari_dasha()│
 │               calculate_narayana_dasha()                            │
+│               (levels=4: sookshmadasha, levels=5: pranadasha)       │
 │                                                                     │
 │  Panchanga    calculate_panchanga()  get_festivals()                │
+│               get_anandadi_yoga()  calculate_panchanga_transitions()│
 │                                                                     │
 │  Yoga/Dosha   detect_yogas()  detect_doshas()                      │
+│               score_yogas()  score_doshas()                        │
 │                                                                     │
 │  Strength     calculate_shadbala()  calculate_ashtakavarga()       │
 │                                                                     │
 │  Compatibility calculate_compatibility()  calculate_porutham()     │
+│               calculate_avakhada()  calculate_papasamyam()         │
 │                                                                     │
 │  Muhurta      calculate_muhurta()  find_muhurta_windows()          │
+│               get_disha_shool()                                    │
 │                                                                     │
 │  Prashna      cast_prashna_chart()  evaluate_prashna()             │
 │               detect_tajika_yogas()                                 │
@@ -35,8 +43,10 @@ vedic-calc follows a layered architecture with strict dependency boundaries. Eve
 │  Jaimini      calculate_chara_karakas()  calculate_arudha_padas()  │
 │                                                                     │
 │  Varshaphal   calculate_varshaphal()                               │
+│               calculate_panchavargeeya_bala()                      │
 │                                                                     │
 │  KP System    calculate_kp_chart()  get_kp_sublord()               │
+│               get_kp_significators()  get_kp_house_significators() │
 │                                                                     │
 │  Numerology   calculate_numerology()                               │
 ├─────────────────────────────────────────────────────────────────────┤
@@ -44,23 +54,26 @@ vedic-calc follows a layered architecture with strict dependency boundaries. Eve
 │                                                                     │
 │  chart/     calculator  renderer  houses  aspects  combustion       │
 │             states  transits  divisional  upagrahas  special_lagnas │
-│             sahams                                                   │
+│             sahams  sade_sati  chandrashtama  functional  chalit    │
+│             relationships  sudarshana  timeline                     │
 │                                                                     │
 │  dasha/     calculator  yogini  ashtottari  narayana                │
-│  panchanga/ calculator  festivals                                   │
+│  panchanga/ calculator  festivals  transitions                      │
 │  muhurta/   calculator  solver                                      │
 │  prashna/   chart  tajika  evaluator                                │
 │  jaimini/   karakas  arudha                                         │
-│  kp/        calculator  houses  sublords                            │
-│  compatibility/ calculator  porutham                                │
+│  kp/        calculator  houses  sublords  significators              │
+│  compatibility/ calculator  porutham  avakhada  constants           │
+│                 papasamyam                                          │
 │  strength/  ashtakavarga  shadbala                                  │
-│  dosha/     calculator                                              │
-│  yoga/      calculator                                              │
+│  dosha/     calculator  scorer                                      │
+│  yoga/      calculator  scorer                                      │
 │  varshaphal/ calculator                                             │
 │  numerology/ calculator                                             │
 ├─────────────────────────────────────────────────────────────────────┤
 │                         Core Layer                                   │
-│         types.py  │  constants.py  │  ephemeris.py                  │
+│     types.py  │  constants.py  │  ephemeris.py  │  helpers.py       │
+│     search.py                                                      │
 ├─────────────────────────────────────────────────────────────────────┤
 │                    Swiss Ephemeris (pyswisseph)                      │
 │                   (NASA JPL ephemeris data)                          │
@@ -366,9 +379,34 @@ Pydantic models for all data structures. All frozen (immutable), JSON-serializab
 | `KPPlanetInfo` | Planet with KP-style lordship chain |
 | `KPChartResult` | Full KP chart with cusps and planet sub-lords |
 | `NumerologyResult` | Name/birth numbers with Chaldean analysis |
+| `SadeSatiResult` | Sade Sati status, phase, and period dates |
+| `ChandrashtamaResult` | Chandrashtama active flag and window times |
+| `AvakhadaInfo` | Birth summary (Varna, Vasya, Yoni, Gana, Nadi) |
+| `DishaShoolInfo` | Inauspicious travel direction for the day |
+| `AnandadiYogaInfo` | Anandadi yoga from tithi-vara combination |
+| `PlanetRelationshipResult` | Natural, temporal, compound relationships |
+| `FunctionalNature` | Functional benefic/malefic status per planet |
+| `ChalitChart` | Bhava Chalit house cusps and planet placements |
+| `TransitionMoment` | Exact datetime of a panchanga element change |
+| `PanchangaTransitions` | All transition times within a day |
+| `ScoredYogaResult` | Yoga with strength score (0-100) |
+| `ScoredDoshaResult` | Dosha with severity score (0-100) |
+| `TimelineEvent` | Single event in a chronological timeline |
+| `EventTimeline` | Merged, sorted list of life events |
+| `KPSignificatorDetail` | 4-level KP significators for a planet |
+| `KPHouseSignificators` | Significator planets for a KP house |
+| `SudarshanaChakra` | 3-ring house overlay from Lagna/Moon/Sun |
+| `PapasamyamResult` | Malefic balance comparison for two charts |
+| `PanchavargeeaBala` | 5-fold Varshaphal strength assessment |
 
 #### `core/ephemeris.py`
 Thin wrapper around pyswisseph. **Only module that imports `swisseph`.** All other modules receive plain floats (degrees) and Python datetimes.
+
+#### `core/helpers.py`
+Shared utilities used across multiple modules. Includes `sign_distance()`, `planet_house()`, degree normalization, and other common calculations.
+
+#### `core/search.py`
+Bisection search utilities for astronomical transitions. Given a function that changes value between two Julian Days, finds the exact transition moment to a configurable precision.
 
 ---
 
@@ -434,6 +472,41 @@ Arabic parts (sahams/lots). Mathematical points calculated from the longitudes o
 
 - `calculate_sahams()` -- returns common sahams (Punya, Vidya, Yasas, Mitra, Mahatmya, Asha, Samartha, Bhratri, Gaurava, Pitri, Rajya, Matri, Putra, Jeeva, Karma, Roga, Kali, Sastra, Bandhu, Mrityu, Paradesa)
 
+#### `chart/sade_sati.py`
+Sade Sati detection and period calculation. Identifies when Saturn transits through the 12th, 1st, and 2nd signs from the natal Moon.
+
+- `calculate_sade_sati()` -- returns `SadeSatiResult`
+
+#### `chart/chandrashtama.py`
+Chandrashtama window detection. Identifies when the Moon transits the 8th sign from the natal Moon (inauspicious ~2.5 day window).
+
+- `calculate_chandrashtama()` -- returns `ChandrashtamaResult`
+
+#### `chart/relationships.py`
+Panchadha Maitri (5-fold planet relationships). Computes natural, temporal, and compound relationships between all planet pairs.
+
+- Returns `PlanetRelationshipResult`
+
+#### `chart/functional.py`
+Functional nature of planets per ascendant. Classifies each planet as functional benefic, malefic, or neutral based on the houses it rules from the ascendant sign.
+
+- `calculate_functional_nature()` -- returns `FunctionalNature` per planet
+
+#### `chart/chalit.py`
+Bhava Chalit chart with equal-house cusps. Redistributes planets into bhavas based on mid-cusp boundaries (can differ from Whole Sign placement).
+
+- `calculate_chalit_chart()` -- returns `ChalitChart`
+
+#### `chart/sudarshana.py`
+3-ring Sudarshana Chakra from Lagna, Moon, and Sun. Overlays three reference frames for combined house analysis.
+
+- `calculate_sudarshana_chakra()` -- returns `SudarshanaChakra`
+
+#### `chart/timeline.py`
+Chronological event timeline. Merges dasha periods, Sade Sati windows, Saturn/Jupiter returns, and other timed events into a single sorted timeline.
+
+- `calculate_event_timeline()` -- returns `EventTimeline`
+
 ---
 
 ### Dasha Module (`dasha/`)
@@ -472,6 +545,11 @@ Daily Vedic calendar (panchanga) computation. The five limbs: Tithi, Nakshatra, 
 Hindu festival detection based on panchanga data. Maps specific tithi + month combinations to festival names (e.g., Chaitra Shukla 9 = Rama Navami).
 
 - `get_festivals()` -- returns festivals for a given date/panchanga
+
+#### `panchanga/transitions.py`
+Exact panchanga element transition times. Uses bisection search to find the precise moment each tithi, nakshatra, yoga, and karana changes within a day.
+
+- `calculate_panchanga_transitions()` -- returns `PanchangaTransitions`
 
 ---
 
@@ -534,6 +612,16 @@ Porutham (South Indian) compatibility analysis. Uses 10 factors (vs. North India
 
 - `calculate_porutham()` -- returns `PoruthamResult` with 10 factor pass/fail
 
+#### `compatibility/avakhada.py`
+Avakhada birth summary table. Computes the traditional birth profile (Varna, Vasya, Yoni, Gana, Nadi, etc.) from the Moon's nakshatra -- used as input for compatibility scoring.
+
+- `calculate_avakhada()` -- returns `AvakhadaInfo`
+
+#### `compatibility/papasamyam.py`
+Malefic balance (Papasamyam) compatibility check. Compares the malefic influence on the 1st, 7th, and 8th houses of both charts to ensure the affliction is balanced.
+
+- `calculate_papasamyam()` -- returns `PapasamyamResult`
+
 ---
 
 ### Strength Module (`strength/`)
@@ -565,6 +653,11 @@ Yoga (planetary combination) detection. Scans a chart for classical yogas -- spe
 
 Function: `detect_yogas()` -- returns list of `YogaResult`
 
+#### `yoga/scorer.py`
+Probabilistic yoga strength scoring (0-100). Evaluates how strongly a detected yoga manifests based on planetary strength, house lordship, and aspects.
+
+- `score_yogas()` -- returns list of `ScoredYogaResult`
+
 ---
 
 ### Dosha Module (`dosha/`)
@@ -578,6 +671,11 @@ Dosha (affliction) detection. Identifies chart-level doshas that indicate specif
 - Grahan Dosha -- luminaries conjunct Rahu/Ketu (eclipse yoga)
 
 Function: `detect_doshas()` -- returns list of `DoshaResult`
+
+#### `dosha/scorer.py`
+Probabilistic dosha severity scoring (0-100). Evaluates actual impact of a detected dosha based on cancellation conditions, planetary strength, and mitigating factors.
+
+- `score_doshas()` -- returns list of `ScoredDoshaResult`
 
 ---
 
@@ -604,6 +702,12 @@ Placidus house cusp calculation for KP. Computes the 12 house cusps using the Pl
 KP sublord lookup. Each degree of the zodiac maps to a sign lord, star lord (nakshatra lord), and sub lord. The sub lord is determined by dividing the nakshatra's 13.333 degrees into unequal parts proportional to Vimsottari dasha years.
 
 - `get_kp_sublord()` -- returns `KPSublordInfo` for a given longitude
+
+#### `kp/significators.py`
+KP 4-level significators per planet and house. Determines planet-to-house signification through occupancy, lordship, star-lordship, and sub-lordship chains.
+
+- `get_kp_significators()` -- returns `KPSignificatorDetail` per planet
+- `get_kp_house_significators()` -- returns `KPHouseSignificators` per house
 
 ---
 

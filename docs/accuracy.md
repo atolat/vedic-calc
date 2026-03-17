@@ -150,6 +150,9 @@ uv run pytest --cov=vedic_calc --cov-report=term-missing
 | `test_varshaphal.py` | 21 | Solar return + Muntha + annual Tajika |
 | `test_numerology.py` | 43 | Chaldean numerology |
 | `test_sahams.py` | 4 | Arabic parts (lots) |
+| `test_sprint1.py` | 46 | Sprint 1: Sade Sati, Chandrashtama, Avakhada, Disha Shool, Relationships, Anandadi |
+| `test_sprint2.py` | 41 | Sprint 2: Transitions, Yoga/Dosha Scoring, Event Timeline |
+| `test_sprint3.py` | 46 | Sprint 3: Sookshma/Prana Dasha, KP Significators, Sudarshana, Papasamyam, Varshaphal ext. |
 | **Comparison tests** | | |
 | `comparison/test_compare_divisional.py` | 45 | Divisional charts vs PyJHora |
 | `comparison/test_compare_yogas.py` | 24 | Yoga detection vs PyJHora |
@@ -159,4 +162,4 @@ uv run pytest --cov=vedic_calc --cov-report=term-missing
 | `comparison/test_compare_ashtakavarga.py` | 12 | Ashtakavarga vs PyJHora |
 | `comparison/test_compare_muhurta.py` | 12 | Muhurta times vs PyJHora |
 | `comparison/test_compare_doshas.py` | 9 | Dosha detection vs PyJHora |
-| **Total** | **461** | |
+| **Total** | **594** | |
