@@ -112,7 +112,17 @@ _SUN_YOGA_PLANETS = {
 # ---------------------------------------------------------------------------
 
 def _detect_ruchaka(chart: BirthChart) -> YogaResult:
-    """Ruchaka Yoga — Mars in own/exalted sign in a kendra house."""
+    """Ruchaka Yoga — Mars in own/exalted sign in a kendra house.
+
+    WHY THIS WORKS: A planet in its own or exalted sign is at peak strength
+    (full dignity). A kendra (1st/4th/7th/10th) is an "angular" house — the
+    most prominent positions in a chart (like the 4 cardinal directions).
+    Mars specifically signifies courage, physical strength, and military
+    leadership. When Mars is both dignified AND prominently placed, it
+    produces exceptional courage and command — hence "Ruchaka" (brilliance).
+
+    Source: BPHS Ch. 75; Phaladeepika Ch. 7.
+    """
     planet = Planet.MARS
     sign = chart.planets[planet].sign
     house = _planet_house(chart, planet)
@@ -127,7 +137,15 @@ def _detect_ruchaka(chart: BirthChart) -> YogaResult:
 
 
 def _detect_bhadra(chart: BirthChart) -> YogaResult:
-    """Bhadra Yoga — Mercury in own/exalted sign in a kendra house."""
+    """Bhadra Yoga — Mercury in own/exalted sign in a kendra house.
+
+    WHY THIS WORKS: Mercury governs intellect, speech, and commerce. When
+    dignified (own/exalted sign) and in a kendra, Mercury's significations
+    manifest powerfully — sharp analytical mind, persuasive speech, and
+    business success. Named "Bhadra" (auspicious/noble).
+
+    Source: BPHS Ch. 75; Phaladeepika Ch. 7.
+    """
     planet = Planet.MERCURY
     sign = chart.planets[planet].sign
     house = _planet_house(chart, planet)
@@ -142,7 +160,15 @@ def _detect_bhadra(chart: BirthChart) -> YogaResult:
 
 
 def _detect_hamsa(chart: BirthChart) -> YogaResult:
-    """Hamsa Yoga — Jupiter in own/exalted sign in a kendra house."""
+    """Hamsa Yoga — Jupiter in own/exalted sign in a kendra house.
+
+    WHY THIS WORKS: Jupiter is the "great benefic" — teacher, wisdom, dharma.
+    Dignified Jupiter in a kendra produces a person drawn to knowledge,
+    spirituality, and righteous conduct. "Hamsa" (swan) symbolizes the
+    mythical bird that can separate milk from water — discernment and purity.
+
+    Source: BPHS Ch. 75; Phaladeepika Ch. 7.
+    """
     planet = Planet.JUPITER
     sign = chart.planets[planet].sign
     house = _planet_house(chart, planet)
@@ -157,7 +183,15 @@ def _detect_hamsa(chart: BirthChart) -> YogaResult:
 
 
 def _detect_malavya(chart: BirthChart) -> YogaResult:
-    """Malavya Yoga — Venus in own/exalted sign in a kendra house."""
+    """Malavya Yoga — Venus in own/exalted sign in a kendra house.
+
+    WHY THIS WORKS: Venus rules beauty, art, love, and material comfort.
+    Dignified Venus in a kendra gives prominence to these themes — the
+    person enjoys luxury, has refined aesthetic sensibilities, and attracts
+    harmonious relationships. Named after the Malava region (prosperous).
+
+    Source: BPHS Ch. 75; Phaladeepika Ch. 7.
+    """
     planet = Planet.VENUS
     sign = chart.planets[planet].sign
     house = _planet_house(chart, planet)
@@ -172,7 +206,16 @@ def _detect_malavya(chart: BirthChart) -> YogaResult:
 
 
 def _detect_shasha(chart: BirthChart) -> YogaResult:
-    """Shasha Yoga — Saturn in own/exalted sign in a kendra house."""
+    """Shasha Yoga — Saturn in own/exalted sign in a kendra house.
+
+    WHY THIS WORKS: Saturn governs discipline, longevity, and authority over
+    large organizations. Most people experience Saturn as delays and hardship,
+    but when Saturn is dignified AND prominently placed, its constructive side
+    emerges — systematic thinking, political power, and enduring legacy.
+    "Shasha" (rabbit) — deceptively gentle, surprisingly powerful.
+
+    Source: BPHS Ch. 75; Phaladeepika Ch. 7.
+    """
     planet = Planet.SATURN
     sign = chart.planets[planet].sign
     house = _planet_house(chart, planet)
@@ -187,7 +230,20 @@ def _detect_shasha(chart: BirthChart) -> YogaResult:
 
 
 def _detect_gajakesari(chart: BirthChart) -> YogaResult:
-    """Gajakesari Yoga — Jupiter in kendra (1/4/7/10) from Moon."""
+    """Gajakesari Yoga — Jupiter in kendra (1/4/7/10) from Moon.
+
+    WHY THIS WORKS: The Moon represents the mind, and Jupiter represents
+    wisdom and expansion. When Jupiter is in an angular house FROM the Moon,
+    Jupiter's wisdom directly supports the mind — producing intelligence,
+    good judgment, and the ability to inspire others. "Gajakesari" means
+    "elephant-lion" — the grandeur of an elephant combined with the
+    courage of a lion. One of the most commonly cited and recognized yogas.
+
+    NOTE: This yoga is measured from Moon (not from the ascendant), making
+    it a "chandra yoga" — its effects relate to the mind and public image.
+
+    Source: Phaladeepika Ch. 6; Saravali Ch. 33.
+    """
     moon_sign = chart.planets[Planet.MOON].sign
     jup_sign = chart.planets[Planet.JUPITER].sign
     distance = _sign_distance(moon_sign, jup_sign)
@@ -202,7 +258,21 @@ def _detect_gajakesari(chart: BirthChart) -> YogaResult:
 
 
 def _detect_budhaditya(chart: BirthChart) -> YogaResult:
-    """Budhaditya Yoga — Sun and Mercury in the same sign."""
+    """Budhaditya Yoga — Sun and Mercury in the same sign.
+
+    WHY THIS WORKS: Sun = authority and self-expression; Mercury = intellect
+    and communication. Their conjunction combines charisma with articulation.
+    The person can express ideas with authority — scholars, writers, public
+    speakers. "Budha" (Mercury) + "Aditya" (Sun) = enlightened intellect.
+
+    CAVEAT: This yoga is extremely common because Mercury is never more than
+    ~28 degrees from the Sun (inner planet), so they're often in the same
+    sign. Its strength depends heavily on whether Mercury is combust (too
+    close to the Sun, typically < 14 degrees). A combust Mercury weakens
+    the yoga significantly. Check combustion status separately.
+
+    Source: Phaladeepika Ch. 6.
+    """
     present = _planets_in_same_sign(chart, Planet.SUN, Planet.MERCURY)
     return YogaResult(
         name="Budhaditya",
@@ -214,7 +284,16 @@ def _detect_budhaditya(chart: BirthChart) -> YogaResult:
 
 
 def _detect_dhana_basic(chart: BirthChart) -> YogaResult:
-    """Dhana Yoga (basic) — Lords of 2nd and 11th conjunct or exchanged."""
+    """Dhana Yoga (basic) — Lords of 2nd and 11th conjunct or exchanged.
+
+    WHY THIS WORKS: The 2nd house governs accumulated wealth (bank balance,
+    family assets, food) and the 11th house governs income/gains (salary,
+    profits, wishes fulfilled). When their lords conjoin or exchange houses,
+    the wealth-accumulation and income-generation themes merge — money flows
+    in and stays. "Dhana" = wealth.
+
+    Source: BPHS Ch. 41 (Dhana Yoga chapter).
+    """
     lord_2 = _house_lord(chart, 2)
     lord_11 = _house_lord(chart, 11)
 
@@ -238,7 +317,16 @@ def _detect_dhana_basic(chart: BirthChart) -> YogaResult:
 
 
 def _detect_lakshmi(chart: BirthChart) -> YogaResult:
-    """Lakshmi Yoga — Lord of 9th in kendra + Venus in own/exalted sign."""
+    """Lakshmi Yoga — Lord of 9th in kendra + Venus in own/exalted sign.
+
+    WHY THIS WORKS: The 9th house = fortune, dharma, and past-life merit.
+    Venus = luxury, wealth, and the goddess Lakshmi herself. When the 9th
+    lord is prominently placed (kendra) AND Venus is dignified, fortune and
+    material abundance combine. Named after Lakshmi, goddess of wealth —
+    this yoga indicates both material prosperity and divine grace.
+
+    Source: Phaladeepika Ch. 6.
+    """
     lord_9 = _house_lord(chart, 9)
     lord_9_house = _planet_house(chart, lord_9)
     venus_sign = chart.planets[Planet.VENUS].sign
@@ -291,7 +379,18 @@ def _detect_raja_yoga(chart: BirthChart) -> YogaResult:
 
 
 def _detect_viparita_raja(chart: BirthChart) -> YogaResult:
-    """Viparita Raja Yoga — Lord of 6th, 8th, or 12th placed in 6, 8, or 12."""
+    """Viparita Raja Yoga — Lord of 6th, 8th, or 12th placed in 6, 8, or 12.
+
+    WHY THIS WORKS: Houses 6, 8, and 12 are "dusthana" (difficult houses) —
+    enemies, death, and losses respectively. Normally, their lords cause
+    trouble wherever they sit. But when a dusthana lord sits in ANOTHER
+    dusthana, the two negatives cancel out — "the enemy of my enemy is my
+    friend." This produces unexpected gains through adversity: winning
+    lawsuits (6th), receiving inheritance (8th), or gaining from foreign
+    lands (12th). "Viparita" = reversed/inverted.
+
+    Source: BPHS Ch. 40.
+    """
     dusthana = [6, 8, 12]
     involved: list[Planet] = []
     present = False
@@ -317,7 +416,19 @@ def _detect_viparita_raja(chart: BirthChart) -> YogaResult:
 
 
 def _detect_saraswati(chart: BirthChart) -> YogaResult:
-    """Saraswati Yoga — Jupiter, Venus, Mercury all in kendras, trikonas, or 2nd."""
+    """Saraswati Yoga — Jupiter, Venus, Mercury all in kendras, trikonas, or 2nd.
+
+    WHY THIS WORKS: Jupiter (wisdom), Venus (art/beauty), and Mercury
+    (intellect/speech) are the three planets of learning and creative
+    expression. When ALL three are well-placed (in kendras, trikonas, or the
+    2nd house of speech/education), the person excels in knowledge, writing,
+    music, and eloquence. Named after Saraswati, goddess of learning.
+
+    The 2nd house is specifically included because it governs speech and
+    formal education — critical for expressing knowledge.
+
+    Source: BPHS Ch. 75; Saravali.
+    """
     good_houses = set(KENDRA_HOUSES) | set(TRIKONA_HOUSES) | {2}
     planets = [Planet.JUPITER, Planet.VENUS, Planet.MERCURY]
     present = all(_planet_house(chart, p) in good_houses for p in planets)
@@ -333,8 +444,22 @@ def _detect_saraswati(chart: BirthChart) -> YogaResult:
 def _detect_kemadruma(chart: BirthChart) -> YogaResult:
     """Kemadruma Yoga (negative) — No planet in 2nd or 12th from Moon.
 
-    Only considers Mars, Mercury, Jupiter, Venus, Saturn (excludes Sun,
-    Rahu, Ketu).
+    WHY THIS WORKS: The Moon represents the mind and emotional stability.
+    Planets adjacent to the Moon (2nd and 12th from it) act as "support" —
+    they give the mind something to lean on. When NO planet flanks the Moon,
+    the mind feels isolated and unsupported. This can manifest as loneliness,
+    financial instability, and emotional vulnerability.
+
+    This is the inverse of Sunapha/Anapha/Durudhara yogas. Only "real"
+    planets are considered (Mars, Mercury, Jupiter, Venus, Saturn) — Sun is
+    excluded because it's always near its own trajectory, and Rahu/Ketu are
+    shadow planets without physical substance.
+
+    IMPORTANT: Many cancellation conditions exist (Moon in kendra, aspected
+    by Jupiter, etc.) that are not checked here. A raw Kemadruma finding
+    should be qualified by checking for cancellations.
+
+    Source: Phaladeepika Ch. 6; Saravali Ch. 33.
     """
     moon_sign = chart.planets[Planet.MOON].sign
     has_2nd = False
@@ -358,7 +483,17 @@ def _detect_kemadruma(chart: BirthChart) -> YogaResult:
 
 
 def _detect_shakata(chart: BirthChart) -> YogaResult:
-    """Shakata Yoga (negative) — Jupiter in 6th, 8th, or 12th from Moon."""
+    """Shakata Yoga (negative) — Jupiter in 6th, 8th, or 12th from Moon.
+
+    WHY THIS WORKS: This is the opposite of Gajakesari. Jupiter is the great
+    benefic and protector of the mind (Moon). When Jupiter is in the 6th,
+    8th, or 12th from Moon (dusthana positions), Jupiter's protective
+    influence is blocked. The mind lacks the stabilizing wisdom that Jupiter
+    provides, leading to fluctuating fortunes — ups and downs like a cart
+    wheel. "Shakata" = cart (the wheel goes up, then down, cyclically).
+
+    Source: Phaladeepika Ch. 6.
+    """
     moon_sign = chart.planets[Planet.MOON].sign
     jup_sign = chart.planets[Planet.JUPITER].sign
     distance = _sign_distance(moon_sign, jup_sign)
@@ -373,7 +508,16 @@ def _detect_shakata(chart: BirthChart) -> YogaResult:
 
 
 def _detect_daridra(chart: BirthChart) -> YogaResult:
-    """Daridra Yoga (negative) — Lord of 11th in 6th, 8th, or 12th house."""
+    """Daridra Yoga (negative) — Lord of 11th in 6th, 8th, or 12th house.
+
+    WHY THIS WORKS: The 11th house is the house of gains, income, and wishes
+    fulfilled. When its lord falls into a dusthana (6th = enemies/debts,
+    8th = sudden losses, 12th = expenses/foreign lands), the income-generating
+    capacity is damaged. Money comes but goes to debts (6th), is lost suddenly
+    (8th), or is spent/sent abroad (12th). "Daridra" = poverty.
+
+    Source: Phaladeepika Ch. 6.
+    """
     lord_11 = _house_lord(chart, 11)
     lord_11_house = _planet_house(chart, lord_11)
     present = lord_11_house in {6, 8, 12}
@@ -387,7 +531,16 @@ def _detect_daridra(chart: BirthChart) -> YogaResult:
 
 
 def _detect_chandra_mangal(chart: BirthChart) -> YogaResult:
-    """Chandra-Mangal Yoga — Moon and Mars in the same sign."""
+    """Chandra-Mangal Yoga — Moon and Mars in the same sign.
+
+    WHY THIS WORKS: Moon = mind/emotions, Mars = action/drive/courage.
+    Their conjunction creates an emotionally driven, action-oriented
+    personality — someone who channels feelings into enterprise. This is
+    particularly associated with self-made wealth because the person has
+    both the emotional motivation (Moon) and the courage to act (Mars).
+
+    Source: Saravali Ch. 33.
+    """
     present = _planets_in_same_sign(chart, Planet.MOON, Planet.MARS)
     return YogaResult(
         name="Chandra-Mangal",
@@ -399,7 +552,16 @@ def _detect_chandra_mangal(chart: BirthChart) -> YogaResult:
 
 
 def _detect_amala(chart: BirthChart) -> YogaResult:
-    """Amala Yoga — A benefic (Jupiter, Venus, Mercury, Moon) in the 10th from lagna."""
+    """Amala Yoga — A benefic (Jupiter, Venus, Mercury, Moon) in the 10th from lagna.
+
+    WHY THIS WORKS: The 10th house is the most visible house — career, public
+    reputation, actions in the world. When a natural benefic (Jupiter, Venus,
+    Mercury, or Moon) occupies this house, the person's public actions and
+    career are colored by benefic qualities: ethics, generosity, beauty, or
+    intelligence. "Amala" = spotless/pure — their public record is clean.
+
+    Source: Phaladeepika Ch. 6.
+    """
     involved: list[Planet] = []
     present = False
 
@@ -421,7 +583,17 @@ def _detect_amala(chart: BirthChart) -> YogaResult:
 
 
 def _detect_sunapha(chart: BirthChart) -> YogaResult:
-    """Sunapha Yoga — A planet (not Sun, Rahu, Ketu) in the 2nd from Moon."""
+    """Sunapha Yoga — A planet (not Sun, Rahu, Ketu) in the 2nd from Moon.
+
+    WHY THIS WORKS: The 2nd from Moon represents what "follows" the mind —
+    resources, speech, and accumulated intelligence. A planet here gives the
+    Moon tangible support on its forward path. The person is self-made
+    (not dependent on inheritance) with good intellect and material comfort.
+    The specific planet in the 2nd colors the effect (Mars = wealth through
+    effort, Jupiter = through wisdom, Venus = through art/beauty, etc.).
+
+    Source: Phaladeepika Ch. 6; Saravali Ch. 33.
+    """
     moon_sign = chart.planets[Planet.MOON].sign
     involved: list[Planet] = []
     present = False
@@ -444,7 +616,16 @@ def _detect_sunapha(chart: BirthChart) -> YogaResult:
 
 
 def _detect_anapha(chart: BirthChart) -> YogaResult:
-    """Anapha Yoga — A planet (not Sun, Rahu, Ketu) in the 12th from Moon."""
+    """Anapha Yoga — A planet (not Sun, Rahu, Ketu) in the 12th from Moon.
+
+    WHY THIS WORKS: The 12th from Moon represents what "precedes" the mind —
+    the subconscious, past experiences, and inner world. A planet here gives
+    the Moon depth and spiritual substance. The person has a magnetic
+    personality, spiritual inclinations, and a rich inner life. They may
+    appear reserved but carry quiet authority.
+
+    Source: Phaladeepika Ch. 6; Saravali Ch. 33.
+    """
     moon_sign = chart.planets[Planet.MOON].sign
     involved: list[Planet] = []
     present = False
@@ -467,7 +648,17 @@ def _detect_anapha(chart: BirthChart) -> YogaResult:
 
 
 def _detect_durudhara(chart: BirthChart) -> YogaResult:
-    """Durudhara Yoga — Planets in both 2nd and 12th from Moon."""
+    """Durudhara Yoga — Planets in both 2nd and 12th from Moon.
+
+    WHY THIS WORKS: This combines Sunapha (2nd from Moon) and Anapha (12th
+    from Moon). The Moon is "flanked" — supported from both sides, like a
+    king with guards on each flank. The person has both material support
+    (2nd = resources ahead) and inner depth (12th = spiritual substance
+    behind). This is the strongest of the three lunar yogas — it produces
+    wealth, fame, and a generous, well-rounded personality.
+
+    Source: Phaladeepika Ch. 6; Saravali Ch. 33.
+    """
     moon_sign = chart.planets[Planet.MOON].sign
     in_2nd: list[Planet] = []
     in_12th: list[Planet] = []
@@ -491,7 +682,16 @@ def _detect_durudhara(chart: BirthChart) -> YogaResult:
 
 
 def _detect_veshi(chart: BirthChart) -> YogaResult:
-    """Veshi Yoga — A planet (not Moon, Rahu, Ketu) in the 2nd from Sun."""
+    """Veshi Yoga — A planet (not Moon, Rahu, Ketu) in the 2nd from Sun.
+
+    WHY THIS WORKS: The Sun represents the soul, authority, and ego. A planet
+    in the 2nd from Sun supports the Sun's significations going forward —
+    giving the person a balanced temperament, good memory, and the ability
+    to earn through their authority. This is the solar equivalent of Sunapha.
+    Moon is excluded because it's too close to the Sun to be meaningful here.
+
+    Source: Phaladeepika Ch. 6.
+    """
     sun_sign = chart.planets[Planet.SUN].sign
     involved: list[Planet] = []
     present = False
@@ -514,7 +714,16 @@ def _detect_veshi(chart: BirthChart) -> YogaResult:
 
 
 def _detect_voshi(chart: BirthChart) -> YogaResult:
-    """Voshi Yoga — A planet (not Moon, Rahu, Ketu) in the 12th from Sun."""
+    """Voshi Yoga — A planet (not Moon, Rahu, Ketu) in the 12th from Sun.
+
+    WHY THIS WORKS: The 12th from Sun represents what precedes the ego —
+    selfless giving, spiritual aspiration, and skill acquired in past lives.
+    A planet here adds depth to the Sun's authority, making the person
+    charitable, skillful, and learned rather than merely powerful. Solar
+    equivalent of Anapha.
+
+    Source: Phaladeepika Ch. 6.
+    """
     sun_sign = chart.planets[Planet.SUN].sign
     involved: list[Planet] = []
     present = False
@@ -537,7 +746,16 @@ def _detect_voshi(chart: BirthChart) -> YogaResult:
 
 
 def _detect_ubhayachari(chart: BirthChart) -> YogaResult:
-    """Ubhayachari Yoga — Planets in both 2nd and 12th from Sun."""
+    """Ubhayachari Yoga — Planets in both 2nd and 12th from Sun.
+
+    WHY THIS WORKS: The Sun is flanked by planets on both sides — supported
+    from ahead (2nd) and behind (12th). This is the solar equivalent of
+    Durudhara. The person's authority (Sun) is bolstered from all directions,
+    producing kingly status, eloquent speech, and the ability to command
+    respect. "Ubhayachari" = moving on both sides.
+
+    Source: Phaladeepika Ch. 6.
+    """
     sun_sign = chart.planets[Planet.SUN].sign
     in_2nd: list[Planet] = []
     in_12th: list[Planet] = []

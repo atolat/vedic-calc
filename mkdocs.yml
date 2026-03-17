@@ -6,13 +6,36 @@ repo_name: atolat/vedic-calc
 theme:
   name: material
   palette:
+    - scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
     - scheme: default
-      primary: deep orange
-      accent: amber
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+  icon:
+    logo: material/creation
+  font:
+    text: DM Sans
+    code: JetBrains Mono
   features:
     - content.code.copy
     - navigation.sections
     - navigation.expand
+    - navigation.top
+    - navigation.instant
+    - toc.follow
+    - search.suggest
+    - search.highlight
+
+extra_css:
+  - https://fonts.googleapis.com/css2?family=Newsreader:wght@400;500;600&display=swap
+  - stylesheets/extra.css
 
 markdown_extensions:
   - admonition
@@ -24,6 +47,8 @@ markdown_extensions:
       alternate_style: true
   - toc:
       permalink: true
+  - tables
+  - attr_list
 
 nav:
   - Home: index.md

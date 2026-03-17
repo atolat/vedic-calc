@@ -15,6 +15,12 @@ KEY CONCEPTS:
     - Choghadiya: 8 day periods + 8 night periods, each labeled with a
       quality (good/best/bad). Used for quick daily timing decisions.
     - Hora: Planetary hour lord at sunrise, determined by the weekday.
+
+SOURCES:
+    - Muhurta Chintamani (the classical text on electional astrology)
+    - BPHS Ch. 96-99 (muhurta chapters)
+    - Panchanga Siddhanta (traditional almanac computation methods)
+    - Standard Indian panchanga practice as codified by DrikPanchang.com
 """
 
 from __future__ import annotations

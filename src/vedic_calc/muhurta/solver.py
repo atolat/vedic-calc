@@ -211,7 +211,14 @@ def find_muhurta_windows(
             # nak 1-2 = Aries(1), 3 = Aries/Taurus, etc.
             # More precise: use the panchanga data directly
             transit_nak = panchanga.nakshatra.value
-            # Approximate sign from nakshatra: sign = ((nak-1) * 13.333 / 30) + 1
+            # Approximate transit Moon sign from its nakshatra position.
+            # Each nakshatra spans 13.333 degrees, so we estimate the Moon's
+            # longitude as the START of the nakshatra. This is approximate
+            # because the Moon could be anywhere within the 13.333 degree span.
+            # The worst-case error is ~13 degrees, which can place the Moon in
+            # the wrong sign for nakshatras near sign boundaries (e.g.,
+            # Krittika spans Aries/Taurus). For production use, compute the
+            # exact Moon longitude from the ephemeris at the panchanga date.
             approx_lon = (transit_nak - 1) * (360.0 / 27.0)
             transit_sign = int(approx_lon / 30.0) + 1
 
