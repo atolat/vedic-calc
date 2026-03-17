@@ -8,7 +8,7 @@ vedic-calc provides accurate astronomical calculations for Vedic (sidereal) astr
 
 | Feature | vedic-calc | PyJHora | pyswisseph (raw) |
 |---------|-----------|---------|------------------|
-| License | Apache 2.0 | AGPL (restrictive) | Modified BSD |
+| License | AGPL-3.0 | AGPL-3.0 | Modified BSD |
 | GUI dependencies | None | Requires PyQt6 | None |
 | API design | Pydantic models, pure functions | GUI-coupled, global state | Low-level C bindings |
 | Vedic astrology | Built-in (14 modules) | Built-in | DIY |

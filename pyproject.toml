@@ -3,7 +3,7 @@ name = "vedic-calc"
 version = "0.1.0"
 description = "Open-source Vedic astrology calculation library built on Swiss Ephemeris"
 readme = "README.md"
-license = "Apache-2.0"
+license = "AGPL-3.0-or-later"
 requires-python = ">=3.11"
 dependencies = [
     "pyswisseph>=2.10",

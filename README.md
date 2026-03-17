@@ -2,7 +2,7 @@
 
 Open-source Vedic astrology calculation library built on the Swiss Ephemeris.
 
-Pure functions, Pydantic models, no GUI dependencies. Apache 2.0 licensed.
+Pure functions, Pydantic models, no GUI dependencies. AGPL-3.0 licensed.
 
 ## Features
 
@@ -120,4 +120,4 @@ Full documentation available at the [docs site](https://atolat.github.io/vedic-c
 
 ## License
 
-Apache 2.0
+AGPL-3.0

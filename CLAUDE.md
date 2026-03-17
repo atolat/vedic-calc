@@ -25,7 +25,7 @@
 - Update `docs/concepts.md` when new Vedic concepts are introduced
 - Update `docs/api.md` when new public functions are added
 - Update `docs/architecture.md` when new modules are added
-- Run `uv run mkdocs build --strict` to verify docs build
+- Run `uv run zensical build` to verify docs build
 
 ## Dependencies
 - Use `uv` for dependency management (fast, modern)
@@ -36,7 +36,7 @@
 ## Structure
 - Source: `src/vedic_calc/`
 - Tests: `tests/`
-- Apache 2.0 license
+- AGPL-3.0 license
 
 ## Commits
 - Only commit when user explicitly approves
