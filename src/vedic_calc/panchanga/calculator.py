@@ -104,13 +104,22 @@ def calculate_panchanga(
     longitude: float,
     timezone_offset: float = 0.0,
     ayanamsa: Ayanamsa = Ayanamsa.LAHIRI,
+    hour: int | None = None,
+    minute: int | None = None,
 ) -> PanchangaInfo:
     """Calculate the Panchanga (five-element daily calendar) for a given date.
+
+    By default, computes panchanga elements (tithi, nakshatra, yoga, karana)
+    at sunrise — the traditional Vedic "start of day." When hour and minute
+    are provided, computes at that specific local time instead. This is
+    important for birth charts where the karana (which changes every ~6 hours)
+    may differ between sunrise and birth time.
 
     STEP-BY-STEP:
         1. Convert the date to a Julian Day at midnight UT
         2. Find the exact sunrise time for the location
-        3. Get Moon and Sun sidereal longitudes at sunrise
+        3. Get Moon and Sun sidereal longitudes at the calculation time
+           (sunrise by default, or the specified hour:minute)
         4. Compute tithi, nakshatra, yoga, karana from those longitudes
         5. Determine the weekday (vara)
 
@@ -122,6 +131,9 @@ def calculate_panchanga(
         longitude: Geographic longitude (east = positive).
         timezone_offset: UTC offset in hours (e.g., 5.5 for IST).
         ayanamsa: Which ayanamsa to use. Defaults to Lahiri.
+        hour: Optional hour (0-23) in local time. When set, panchanga
+            elements are computed at this time instead of sunrise.
+        minute: Optional minute (0-59). Used with hour.
 
     Returns:
         PanchangaInfo with all 5 elements + sunrise/sunset times.
@@ -155,8 +167,14 @@ def calculate_panchanga(
         # Fall back to using noon for calculations.
         pass
 
-    # ─── Step 3: Get Moon and Sun positions at sunrise (or noon fallback) ───
-    calc_jd = sunrise_jd if sunrise_jd is not None else jd_midnight + 0.5
+    # ─── Step 3: Get Moon and Sun positions ───
+    # When hour/minute are specified, compute at that exact local time
+    # (for birth-chart panchanga). Otherwise use sunrise (daily panchanga).
+    if hour is not None:
+        local_hour = hour + (minute or 0) / 60.0
+        calc_jd = _to_julian_day(year, month, day, local_hour - timezone_offset)
+    else:
+        calc_jd = sunrise_jd if sunrise_jd is not None else jd_midnight + 0.5
 
     moon_lon, _ = get_planet_longitude(calc_jd, Planet.MOON, ayanamsa)
     sun_lon, _ = get_planet_longitude(calc_jd, Planet.SUN, ayanamsa)
