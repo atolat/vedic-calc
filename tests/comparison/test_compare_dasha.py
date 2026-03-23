@@ -174,7 +174,8 @@ def test_yogini_sequence_matches_pyjhora(ref, collector):
     vc_periods = calculate_yogini_dasha(vc_chart, levels=1)
     vc_time = (time.perf_counter() - vc_start) * 1000
 
-    vc_sequence = _vc_maha_sequence(vc_periods)
+    # Yogini dasha repeats in 36-year cycles; only compare the first cycle (8 periods)
+    vc_sequence = _vc_maha_sequence(vc_periods)[:8]
 
     # PyJHora
     jd, place, dob, tob = pj_setup(ref)

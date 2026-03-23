@@ -150,59 +150,83 @@ def _detect_kaal_sarpa(chart: BirthChart) -> DoshaResult:
     """Detect Kaal Sarpa Dosha.
 
     All 7 classical planets (Sun through Saturn) must lie on one side
-    of the Rahu-Ketu axis. A planet exactly conjunct a node (within 1 deg)
-    makes it a partial Kaal Sarpa.
+    of the Rahu-Ketu axis for Kalsarpa to be present.
+
+    Two-tier detection (matching the most widely-used industry definition):
+
+    1. **Full Kalsarpa**: All 7 planets are strictly between Rahu and Ketu
+       by degree (no planet conjunct a node). Severity = "severe".
+
+    2. **Partial Kalsarpa**: Planets in the same sign as Rahu or Ketu are
+       treated as "on the axis" (they are effectively conjunct a node by
+       sign). If all remaining non-axis planets fall on one side of the
+       nodal axis, it is a Partial Kalsarpa. Severity = "moderate".
+       This matches the common commercial software interpretation where
+       planetary conjunction with a node doesn't break the yoga.
+
+    Note: Kalsarpa Dosha is NOT found in BPHS or any classical text.
+    It is a later tradition with varying definitions across sources.
     """
     rahu_lon = chart.planets[Planet.RAHU].longitude
     ketu_lon = chart.planets[Planet.KETU].longitude
+    rahu_sign = chart.planets[Planet.RAHU].sign
+    ketu_sign = chart.planets[Planet.KETU].sign
 
     classical_planets = [
         Planet.SUN, Planet.MOON, Planet.MARS, Planet.MERCURY,
         Planet.JUPITER, Planet.VENUS, Planet.SATURN,
     ]
 
-    # Check how many planets are on each side of the Rahu→Ketu arc.
-    # Planets conjunct a node — either by degree (within 5°) OR by sign
-    # (same sign as Rahu/Ketu) — are considered "on the axis" and don't
-    # count toward either side. This matches the widely-used partial
-    # Kalsarpa definition.
-    NODE_CONJUNCTION_ORB = 5.0
-    rahu_sign = chart.planets[Planet.RAHU].sign
-    ketu_sign = chart.planets[Planet.KETU].sign
-
+    # ------------------------------------------------------------------
+    # Tier 1: Strict degree-based check (Full Kalsarpa)
+    # ------------------------------------------------------------------
     in_rahu_ketu_arc = 0
     in_ketu_rahu_arc = 0
-    on_axis = 0
 
     for planet in classical_planets:
         lon = chart.planets[planet].longitude
-        p_sign = chart.planets[planet].sign
-
-        dist_rahu = min(abs(lon - rahu_lon), 360 - abs(lon - rahu_lon))
-        dist_ketu = min(abs(lon - ketu_lon), 360 - abs(lon - ketu_lon))
-
-        if (dist_rahu <= NODE_CONJUNCTION_ORB or dist_ketu <= NODE_CONJUNCTION_ORB
-                or p_sign == rahu_sign or p_sign == ketu_sign):
-            on_axis += 1
-        elif _is_between_clockwise(lon, rahu_lon, ketu_lon):
+        if _is_between_clockwise(lon, rahu_lon, ketu_lon):
             in_rahu_ketu_arc += 1
         else:
             in_ketu_rahu_arc += 1
 
-    # Full: all 7 on one side (no planets on axis)
-    # Partial: all non-axis planets on one side (at least 1 on axis)
-    all_one_side = (in_rahu_ketu_arc == 7) or (in_ketu_rahu_arc == 7)
-    partial = (
-        on_axis > 0
-        and (in_rahu_ketu_arc + on_axis + in_ketu_rahu_arc == 7)
-        and (in_rahu_ketu_arc == 0 or in_ketu_rahu_arc == 0)
-    )
-    is_present = all_one_side or partial
+    full = (in_rahu_ketu_arc == 7) or (in_ketu_rahu_arc == 7)
 
-    if all_one_side and on_axis == 0:
+    # ------------------------------------------------------------------
+    # Tier 2: Sign-based axis exclusion (Partial Kalsarpa)
+    # Planets in the same sign as Rahu or Ketu are treated as "on the
+    # axis" — they are conjunct a node by sign and don't break the
+    # hemming pattern. If all remaining non-axis planets fall on one
+    # side, it is a Partial Kalsarpa.
+    # ------------------------------------------------------------------
+    partial = False
+    on_axis = 0
+    side_rk = 0
+    side_kr = 0
+
+    if not full:
+        for planet in classical_planets:
+            lon = chart.planets[planet].longitude
+            p_sign = chart.planets[planet].sign
+
+            if p_sign == rahu_sign or p_sign == ketu_sign:
+                on_axis += 1
+            elif _is_between_clockwise(lon, rahu_lon, ketu_lon):
+                side_rk += 1
+            else:
+                side_kr += 1
+
+        partial = (
+            on_axis > 0
+            and (side_rk == 0 or side_kr == 0)
+        )
+
+    is_present = full or partial
+
+    if full:
         severity = "severe"
         variant = "Full"
-    elif is_present:
+    elif partial:
         severity = "moderate"
         variant = "Partial"
     else:
@@ -217,14 +241,15 @@ def _detect_kaal_sarpa(chart: BirthChart) -> DoshaResult:
         if jupiter_house in KENDRA_HOUSES:
             cancellation.append("Jupiter in kendra mitigates")
 
-        # 2. Any planet conjunct Rahu or Ketu (within 5 degrees)
-        for planet in classical_planets:
-            lon = chart.planets[planet].longitude
-            dist_rahu = min(abs(lon - rahu_lon), 360 - abs(lon - rahu_lon))
-            dist_ketu = min(abs(lon - ketu_lon), 360 - abs(lon - ketu_lon))
-            if dist_rahu <= 5.0 or dist_ketu <= 5.0:
-                cancellation.append("Planet conjunct node breaks the axis")
-                break
+        # 2. Any planet conjunct Rahu or Ketu (within 5 degrees or same sign)
+        if on_axis > 0 or any(
+            min(abs(chart.planets[p].longitude - rahu_lon),
+                360 - abs(chart.planets[p].longitude - rahu_lon)) <= 5.0
+            or min(abs(chart.planets[p].longitude - ketu_lon),
+                   360 - abs(chart.planets[p].longitude - ketu_lon)) <= 5.0
+            for p in classical_planets
+        ):
+            cancellation.append("Planet conjunct node weakens the dosha")
 
     description = (
         f"{variant} Kaal Sarpa Dosha: all planets hemmed between Rahu-Ketu axis."

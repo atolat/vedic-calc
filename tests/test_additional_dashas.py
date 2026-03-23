@@ -19,22 +19,24 @@ def mumbai_chart():
 
 class TestYoginiDasha:
     def test_returns_periods(self, mumbai_chart):
+        """Yogini cycle repeats 4 times -> 32 mahadasha periods."""
         periods = calculate_yogini_dasha(mumbai_chart, levels=1)
-        assert len(periods) == 8  # 8 yoginis
+        assert len(periods) == 32  # 8 yoginis × 4 cycles
 
-    def test_total_duration_at_most_36_years(self, mumbai_chart):
-        """Total should be <= 36 years (first period is partial)."""
+    def test_total_duration_covers_lifetime(self, mumbai_chart):
+        """Total should be ~140 years (4 cycles of ~36y, first period partial)."""
         periods = calculate_yogini_dasha(mumbai_chart, levels=1)
         total = sum(p.duration_years for p in periods)
-        assert total <= 36.01
-        assert total > 30  # Should be close to 36
+        # 4 full cycles = 144y, minus partial first period
+        assert total > 130
+        assert total <= 144.01
 
     def test_level2_has_sub_periods(self, mumbai_chart):
         periods = calculate_yogini_dasha(mumbai_chart, levels=2)
         mahas = [p for p in periods if p.level == "mahadasha"]
         antars = [p for p in periods if p.level == "antardasha"]
-        assert len(mahas) == 8
-        assert len(antars) == 64  # 8 × 8
+        assert len(mahas) == 32  # 8 × 4 cycles
+        assert len(antars) == 256  # 8 × 8 × 4 cycles
 
 
 class TestAshtottariDasha:
