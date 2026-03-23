@@ -1,4 +1,17 @@
-"""Sade Sati (Saturn's 7.5-year transit over Moon) calculator."""
+"""Sade Sati and related Saturn transit afflictions calculator.
+
+Covers three types of Saturn-over-Moon transits:
+  1. **Sade Sati** (7.5-year cycle): Saturn in 12th, 1st (same), or 2nd sign from Moon.
+     - Rising phase: Saturn in the sign before Moon's sign (12th from Moon)
+     - Peak phase: Saturn in the same sign as Moon
+     - Setting phase: Saturn in the sign after Moon's sign (2nd from Moon)
+  2. **Small Panoti** (Kantaka Shani): Saturn in the 4th sign from Moon.
+  3. **Ashtama Shani**: Saturn in the 8th sign from Moon.
+
+All three are sign-based (whole-sign transits), not degree-based.
+Prokerala (and many traditional sources) group all three under the
+"Sade Sati" umbrella, so `is_active` is True when ANY of these apply.
+"""
 
 from __future__ import annotations
 
@@ -13,6 +26,24 @@ def _saturn_sign_at(jd: float, ayanamsa: Ayanamsa) -> int:
     """Get Saturn's sign number (1-12) at a given JD."""
     lon, _ = get_planet_longitude(jd, Planet.SATURN, ayanamsa)
     return int(lon / 30.0) + 1
+
+
+def _get_saturn_transit_signs(moon_num: int) -> set[int]:
+    """Return the set of signs where Saturn causes affliction relative to the Moon.
+
+    This includes:
+      - 12th from Moon (Sade Sati rising)
+      - 1st / same as Moon (Sade Sati peak)
+      - 2nd from Moon (Sade Sati setting)
+      - 4th from Moon (Small Panoti / Kantaka Shani)
+      - 8th from Moon (Ashtama Shani)
+    """
+    sign_12th = ((moon_num - 2) % 12) + 1   # one sign before Moon
+    sign_1st = moon_num                      # same sign as Moon
+    sign_2nd = (moon_num % 12) + 1           # one sign after Moon
+    sign_4th = ((moon_num + 2) % 12) + 1     # 4th from Moon
+    sign_8th = ((moon_num + 6) % 12) + 1     # 8th from Moon
+    return {sign_12th, sign_1st, sign_2nd, sign_4th, sign_8th}
 
 
 def _scan_saturn_sign_periods(
@@ -83,8 +114,17 @@ def _scan_saturn_sign_periods(
 
 
 def _sign_to_phase(sign_num: int, moon_sign: Sign) -> str:
-    """Determine which Sade Sati phase a sign corresponds to."""
+    """Determine which Saturn transit phase a sign corresponds to.
+
+    Phases:
+      - "rising": Saturn in 12th from Moon (entering Sade Sati)
+      - "peak": Saturn conjunct Moon's sign
+      - "setting": Saturn in 2nd from Moon (exiting Sade Sati)
+      - "small_panoti": Saturn in 4th from Moon (Kantaka Shani)
+      - "ashtama_shani": Saturn in 8th from Moon
+    """
     moon_num = int(moon_sign)
+    # dist = how many signs ahead of Moon (1-based, so same sign = 1)
     dist = ((sign_num - moon_num) % 12) + 1
     if dist == 12:
         return "rising"
@@ -92,6 +132,10 @@ def _sign_to_phase(sign_num: int, moon_sign: Sign) -> str:
         return "peak"
     elif dist == 2:
         return "setting"
+    elif dist == 4:
+        return "small_panoti"
+    elif dist == 8:
+        return "ashtama_shani"
     return "unknown"
 
 
@@ -100,7 +144,10 @@ def calculate_sade_sati(
     target_date: datetime | None = None,
     ayanamsa: Ayanamsa = Ayanamsa.LAHIRI,
 ) -> SadeSatiResult:
-    """Check if Sade Sati is active and which phase.
+    """Check if Sade Sati (or related Saturn transit affliction) is active.
+
+    Detects Sade Sati proper (12th/1st/2nd from Moon), Small Panoti (4th),
+    and Ashtama Shani (8th). All are sign-based (whole-sign transits).
 
     Args:
         chart: Birth chart (used for Moon sign).
@@ -116,11 +163,8 @@ def calculate_sade_sati(
     moon_sign = chart.planets[Planet.MOON].sign
     moon_num = int(moon_sign)
 
-    # Sade Sati signs: 12th, 1st (same), 2nd from Moon
-    sign_12th = ((moon_num - 2) % 12) + 1
-    sign_1st = moon_num
-    sign_2nd = (moon_num % 12) + 1
-    target_signs = {sign_12th, sign_1st, sign_2nd}
+    # All Saturn transit affliction signs (Sade Sati + Small Panoti + Ashtama Shani)
+    target_signs = _get_saturn_transit_signs(moon_num)
 
     # Check Saturn's current sign
     tz = chart.timezone_offset
@@ -145,7 +189,10 @@ def calculate_sade_sati_periods(
     end_date: datetime,
     ayanamsa: Ayanamsa = Ayanamsa.LAHIRI,
 ) -> SadeSatiResult:
-    """Calculate all Sade Sati periods in a date range.
+    """Calculate all Saturn transit affliction periods in a date range.
+
+    Includes Sade Sati (12th/1st/2nd from Moon), Small Panoti (4th),
+    and Ashtama Shani (8th).
 
     Args:
         chart: Birth chart (used for Moon sign).
@@ -159,10 +206,7 @@ def calculate_sade_sati_periods(
     moon_sign = chart.planets[Planet.MOON].sign
     moon_num = int(moon_sign)
 
-    sign_12th = ((moon_num - 2) % 12) + 1
-    sign_1st = moon_num
-    sign_2nd = (moon_num % 12) + 1
-    target_signs = {sign_12th, sign_1st, sign_2nd}
+    target_signs = _get_saturn_transit_signs(moon_num)
 
     tz = chart.timezone_offset
     jd_start = _to_julian_day(start_date.year, start_date.month, start_date.day,

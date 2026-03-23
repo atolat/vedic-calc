@@ -266,7 +266,7 @@ class TestSadeSati:
         end = datetime(2020, 1, 1)
         result = calculate_sade_sati_periods(mumbai_chart, start, end)
         for phase in result.phases:
-            assert phase.phase in {"rising", "peak", "setting"}
+            assert phase.phase in {"rising", "peak", "setting", "small_panoti", "ashtama_shani"}
 
     def test_phases_chronological(self, mumbai_chart):
         start = datetime(1990, 1, 1)
