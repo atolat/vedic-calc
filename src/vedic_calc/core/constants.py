@@ -1188,3 +1188,114 @@ GOOD_VARAS: dict[str, set[int]] = {
     "medical": {0, 2, 3},       # Mon, Wed, Thu
     "general": {0, 2, 3, 4},    # Mon, Wed, Thu, Fri
 }
+
+# ---------------------------------------------------------------------------
+# Vara (weekday) favorable activities
+# ---------------------------------------------------------------------------
+# Each weekday is ruled by a planet and favorable for specific activities.
+# Tuesday and Saturday are generally considered inauspicious for new ventures.
+# Source: Muhurta Chintamani, traditional panchanga guides.
+
+VARA_FAVORABLE_ACTIVITIES: dict[int, list[str]] = {
+    0: ["meditation", "travel", "agriculture", "starting new ventures"],           # Monday (Moon)
+    1: ["surgery", "combat", "competitive activities", "property disputes"],       # Tuesday (Mars)
+    2: ["education", "business", "communication", "writing", "accounting"],        # Wednesday (Mercury)
+    3: ["worship", "marriage", "education", "travel", "starting new ventures"],    # Thursday (Jupiter)
+    4: ["marriage", "arts", "entertainment", "buying vehicles", "luxury items"],   # Friday (Venus)
+    5: ["iron work", "oil-related", "machinery", "discipline", "fasting"],         # Saturday (Saturn)
+    6: ["government work", "leadership", "health", "worship", "charity"],          # Sunday (Sun)
+}
+
+# Whether a weekday is generally auspicious for new activities.
+# Monday, Wednesday, Thursday, Friday = generally good.
+# Tuesday = Mars day (aggressive), Saturday = Saturn day (restrictive),
+# Sunday = neutral (good for some, not for new business).
+# Source: Muhurta Chintamani.
+VARA_AUSPICIOUS: dict[int, bool | None] = {
+    0: True,    # Monday — generally auspicious
+    1: False,   # Tuesday — generally inauspicious for new undertakings
+    2: True,    # Wednesday — generally auspicious
+    3: True,    # Thursday — most auspicious weekday
+    4: True,    # Friday — generally auspicious
+    5: False,   # Saturday — generally inauspicious for new undertakings
+    6: None,    # Sunday — neutral (good for authority/govt, not for business)
+}
+
+# ---------------------------------------------------------------------------
+# Good tithis for general auspiciousness (beyond activity-specific)
+# ---------------------------------------------------------------------------
+# Purnima (15) and Amavasya (30) have special significance.
+# Purnima is generally auspicious; Amavasya is generally inauspicious.
+# Rikta tithis (4, 9, 14 of each paksha) are inauspicious.
+# Source: Muhurta Chintamani.
+
+AUSPICIOUS_TITHIS: set[int] = {2, 3, 5, 7, 10, 11, 13, 15}  # Generally auspicious
+INAUSPICIOUS_TITHIS: set[int] = {4, 9, 14, 19, 24, 29, 30}   # Rikta + Amavasya
+
+# ---------------------------------------------------------------------------
+# Auspicious and inauspicious yogas (panchanga yoga classification)
+# ---------------------------------------------------------------------------
+# The 27 yogas are classified into auspicious, inauspicious, and mixed.
+# Source: Surya Siddhanta, Muhurta Chintamani.
+
+AUSPICIOUS_YOGAS: set[int] = {
+    2,   # Priti — love, affection
+    3,   # Ayushman — longevity
+    4,   # Saubhagya — good fortune
+    5,   # Shobhana — beauty, splendor
+    7,   # Sukarma — good deeds
+    8,   # Dhriti — steadiness
+    11,  # Vriddhi — growth
+    12,  # Dhruva — stability
+    14,  # Harshana — joy
+    16,  # Siddhi — accomplishment
+    20,  # Shiva — auspiciousness
+    21,  # Siddha — success
+    22,  # Sadhya — achievable
+    23,  # Shubha — auspicious
+    24,  # Shukla — brightness
+    25,  # Brahma — creation
+    26,  # Indra — power
+}
+
+INAUSPICIOUS_YOGAS: set[int] = {
+    1,   # Vishkambha — obstruction
+    6,   # Atiganda — great danger
+    9,   # Shoola — pain, piercing
+    10,  # Ganda — knot, difficulty
+    13,  # Vyaghata — destruction
+    15,  # Vajra — thunderbolt (mixed, generally tough)
+    17,  # Vyatipata — great calamity
+    18,  # Variyan — uncomfortable
+    19,  # Parigha — obstruction
+    27,  # Vaidhriti — great misfortune
+}
+
+# ---------------------------------------------------------------------------
+# Nakshatra auspiciousness classification (general purpose)
+# ---------------------------------------------------------------------------
+# Nakshatras are classified by their nature for general auspiciousness.
+# Source: Muhurta Chintamani, BPHS.
+
+AUSPICIOUS_NAKSHATRAS: set[int] = {
+    1,   # Ashwini — swift, good for beginnings
+    4,   # Rohini — growth, prosperity
+    7,   # Punarvasu — renewal, return
+    8,   # Pushya — nourishment (most auspicious nakshatra)
+    11,  # Purva Phalguni — enjoyment
+    12,  # Uttara Phalguni — patronage
+    13,  # Hasta — skill, dexterity
+    15,  # Swati — independence
+    17,  # Anuradha — friendship
+    21,  # Uttara Ashadha — final victory
+    22,  # Shravana — learning
+    26,  # Uttara Bhadrapada — depths
+    27,  # Revati — wealth, completion
+}
+
+INAUSPICIOUS_NAKSHATRAS: set[int] = {
+    6,   # Ardra — storm, destruction (Rudra's nakshatra)
+    9,   # Ashlesha — serpent, clinging
+    18,  # Jyeshtha — eldest, conflict
+    19,  # Moola — root, uprooting
+}

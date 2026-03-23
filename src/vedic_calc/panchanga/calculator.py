@@ -43,6 +43,17 @@ from vedic_calc.core.constants import (
     TITHI_NAMES,
     VARA_NAMES,
     YOGA_NAMES,
+    # Auspiciousness classification constants
+    AUSPICIOUS_TITHIS,
+    INAUSPICIOUS_TITHIS,
+    AUSPICIOUS_NAKSHATRAS,
+    INAUSPICIOUS_NAKSHATRAS,
+    AUSPICIOUS_YOGAS,
+    INAUSPICIOUS_YOGAS,
+    BAD_YOGAS,
+    BAD_KARANAS,
+    VARA_AUSPICIOUS,
+    VARA_FAVORABLE_ACTIVITIES,
 )
 from vedic_calc.core.ephemeris import (
     _to_julian_day,
@@ -224,7 +235,129 @@ def calculate_panchanga(
     # ─── Step 5: VARA (weekday) ───
     # Derived from the calendar date using Python's datetime.
     dt = datetime(year, month, day)
-    vara = VARA_NAMES[dt.weekday()]
+    weekday = dt.weekday()
+    vara = VARA_NAMES[weekday]
+
+    # ─── Step 6: AUSPICIOUSNESS CLASSIFICATION ───
+    # Classify each of the 5 panchanga elements as auspicious/inauspicious/neutral.
+    # This lets downstream consumers (LLMs, UIs) make decisions without needing
+    # to hard-code Vedic classification rules.
+
+    # --- Tithi auspiciousness ---
+    # Rikta tithis (4, 9, 14 of each paksha) and Amavasya are inauspicious.
+    # Certain tithis (2, 3, 5, 7, 10, 11, 13, Purnima) are generally auspicious.
+    tithi_auspicious: bool | None = None
+    tithi_note: str | None = None
+    if tithi_number in INAUSPICIOUS_TITHIS:
+        tithi_auspicious = False
+        if tithi_number in {4, 9, 14, 19, 24, 29}:
+            tithi_note = "Rikta Tithi - avoid new undertakings"
+        elif tithi_number == 30:
+            tithi_note = "Amavasya (New Moon) - generally inauspicious for new activities"
+    elif tithi_number in AUSPICIOUS_TITHIS:
+        tithi_auspicious = True
+
+    # --- Nakshatra auspiciousness ---
+    # Pushya (8) is the most auspicious; Ardra, Ashlesha, Jyeshtha, Moola
+    # are generally inauspicious. Others are neutral or mixed.
+    nak_num = nakshatra.value
+    nakshatra_auspicious: bool | None = None
+    if nak_num in AUSPICIOUS_NAKSHATRAS:
+        nakshatra_auspicious = True
+    elif nak_num in INAUSPICIOUS_NAKSHATRAS:
+        nakshatra_auspicious = False
+
+    # --- Yoga auspiciousness ---
+    # Vyatipata (17) and Vaidhriti (27) are the worst. Several others are
+    # also classified as inauspicious. Source: Surya Siddhanta.
+    yoga_auspicious: bool | None = None
+    yoga_note: str | None = None
+    if yoga_number in INAUSPICIOUS_YOGAS:
+        yoga_auspicious = False
+        if yoga_number in BAD_YOGAS:
+            yoga_note = "Inauspicious yoga - avoid important activities"
+        else:
+            yoga_note = "Generally unfavorable yoga"
+    elif yoga_number in AUSPICIOUS_YOGAS:
+        yoga_auspicious = True
+
+    # --- Karana auspiciousness ---
+    # Vishti/Bhadra karanas are inauspicious (every 7th karana in the
+    # repeating cycle). All other karanas are neutral or mildly positive.
+    karana_auspicious: bool | None = None
+    karana_note: str | None = None
+    if karana_number in BAD_KARANAS:
+        karana_auspicious = False
+        karana_note = "Vishti Karana (Bhadra) - avoid auspicious activities"
+    elif karana_name not in {"Shakuni", "Chatushpada", "Nagava"}:
+        # Repeating karanas other than Vishti are generally fine.
+        # Fixed karanas (Shakuni, Chatushpada, Nagava) are neutral/mixed.
+        karana_auspicious = True
+
+    # --- Vara auspiciousness ---
+    # Thursday is the best day; Tuesday and Saturday are generally inauspicious
+    # for starting new activities. Sunday is neutral.
+    vara_auspicious_val = VARA_AUSPICIOUS.get(weekday)
+    vara_favorable = VARA_FAVORABLE_ACTIVITIES.get(weekday, [])
+
+    # ─── Step 7: COMPOSITE DAY SUMMARY ───
+    # Aggregate all five element classifications into a human-readable summary.
+    auspicious_factors: list[str] = []
+    inauspicious_factors: list[str] = []
+
+    if tithi_auspicious is True:
+        auspicious_factors.append(f"Good tithi ({tithi_name})")
+    elif tithi_auspicious is False:
+        inauspicious_factors.append(f"Bad tithi ({tithi_name}){' - ' + tithi_note if tithi_note else ''}")
+
+    if nakshatra_auspicious is True:
+        from vedic_calc.core.constants import NAKSHATRA_NAMES
+        auspicious_factors.append(f"Favorable nakshatra ({NAKSHATRA_NAMES[nakshatra]})")
+    elif nakshatra_auspicious is False:
+        from vedic_calc.core.constants import NAKSHATRA_NAMES
+        inauspicious_factors.append(f"Unfavorable nakshatra ({NAKSHATRA_NAMES[nakshatra]})")
+
+    if yoga_auspicious is True:
+        auspicious_factors.append(f"Auspicious yoga ({yoga_name})")
+    elif yoga_auspicious is False:
+        inauspicious_factors.append(f"Inauspicious yoga ({yoga_name}){' - ' + yoga_note if yoga_note else ''}")
+
+    if karana_auspicious is True:
+        auspicious_factors.append(f"Good karana ({karana_name})")
+    elif karana_auspicious is False:
+        inauspicious_factors.append(f"Bad karana ({karana_name}){' - ' + karana_note if karana_note else ''}")
+
+    if vara_auspicious_val is True:
+        auspicious_factors.append(f"Favorable weekday ({vara.split(' ')[0]})")
+    elif vara_auspicious_val is False:
+        inauspicious_factors.append(f"{vara.split(' ')[0]} - generally inauspicious for new activities")
+
+    # Determine overall day quality.
+    # "unfavorable" if any hard inauspicious factor (bad yoga, bad karana, bad tithi).
+    # "favorable" if no inauspicious factors and at least one auspicious.
+    # "mixed" otherwise.
+    if inauspicious_factors:
+        overall = "unfavorable" if any(
+            # Hard negatives: Vyatipata/Vaidhriti yogas, Vishti karana, Rikta tithis
+            yoga_number in BAD_YOGAS
+            or karana_number in BAD_KARANAS
+            or tithi_number in {4, 9, 14, 19, 24, 29}
+            for _ in [None]
+        ) else "mixed"
+    elif auspicious_factors:
+        overall = "favorable"
+    else:
+        overall = "mixed"
+
+    # If we have both auspicious and inauspicious, it's mixed regardless
+    if auspicious_factors and inauspicious_factors:
+        overall = "mixed"
+
+    day_summary = {
+        "auspicious_factors": auspicious_factors,
+        "inauspicious_factors": inauspicious_factors,
+        "overall": overall,
+    }
 
     return PanchangaInfo(
         date=dt,
@@ -238,4 +371,15 @@ def calculate_panchanga(
         karana_name=karana_name,
         sunrise=sunrise_dt,
         sunset=sunset_dt,
+        # Auspiciousness indicators
+        tithi_auspicious=tithi_auspicious,
+        tithi_note=tithi_note,
+        nakshatra_auspicious=nakshatra_auspicious,
+        yoga_auspicious=yoga_auspicious,
+        yoga_note=yoga_note,
+        karana_auspicious=karana_auspicious,
+        karana_note=karana_note,
+        vara_auspicious=vara_auspicious_val,
+        vara_favorable_for=vara_favorable,
+        day_summary=day_summary,
     )

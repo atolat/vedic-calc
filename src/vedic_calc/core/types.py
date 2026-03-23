@@ -359,6 +359,29 @@ class PanchangaInfo(BaseModel, frozen=True):
     sunrise: datetime | None = None
     sunset: datetime | None = None
 
+    # --- Auspiciousness indicators ---
+    # These fields classify each panchanga element so that consumers (LLMs,
+    # UIs) don't need to hard-code Vedic rules.  True = auspicious, False =
+    # inauspicious, None = neutral / not classified either way.
+
+    tithi_auspicious: bool | None = None
+    tithi_note: str | None = None
+
+    nakshatra_auspicious: bool | None = None
+
+    yoga_auspicious: bool | None = None
+    yoga_note: str | None = None
+
+    karana_auspicious: bool | None = None
+    karana_note: str | None = None
+
+    vara_auspicious: bool | None = None
+    vara_favorable_for: list[str] = Field(default_factory=list)
+
+    # Composite day summary — aggregates all five elements into a quick
+    # human-readable assessment.
+    day_summary: dict | None = None
+
 
 # ---------------------------------------------------------------------------
 # Divisional chart types
