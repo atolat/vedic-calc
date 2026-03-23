@@ -89,7 +89,7 @@ class TestAvakhada:
         assert info.yoni == "Horse"
         assert info.gana == "Deva"
         assert info.name_letter == "Chu"
-        assert info.varna == "Vaishya"
+        assert info.varna == "Kshatriya"
 
     def test_rohini_pada2_taurus(self):
         info = calculate_avakhada(Nakshatra.ROHINI, 2, Sign.TAURUS)

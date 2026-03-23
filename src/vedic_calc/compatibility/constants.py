@@ -30,7 +30,7 @@ VARNA = {
     Sign.PISCES: 1,       # Water -> Brahmin
 }
 
-VARNA_NAMES = {1: "Brahmin", 2: "Vaishya", 3: "Kshatriya", 4: "Shudra"}
+VARNA_NAMES = {1: "Brahmin", 2: "Kshatriya", 3: "Vaishya", 4: "Shudra"}
 
 # ---------------------------------------------------------------------------
 # Vashya (mutual influence) groups by Moon sign
@@ -100,7 +100,7 @@ YONI_ANIMAL_NAMES = {
 # 1=Deva, 2=Manushya, 3=Rakshasa
 GANA = {
     Nakshatra.ASHWINI: 1,          # Deva
-    Nakshatra.BHARANI: 1,          # Deva
+    Nakshatra.BHARANI: 2,          # Manushya
     Nakshatra.KRITTIKA: 3,         # Rakshasa
     Nakshatra.ROHINI: 2,           # Manushya
     Nakshatra.MRIGASHIRA: 1,       # Deva
