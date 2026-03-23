@@ -1,6 +1,6 @@
 # vedic-calc Comprehensive Accuracy Benchmark
 
-**Generated**: 2026-03-23 05:57 UTC
+**Generated**: 2026-03-23 06:56 UTC
 **Charts tested**: 10
 **Compatibility pairs**: 5
 **Reference APIs**: AstrologyAPI.com (Professional), Prokerala
@@ -8,23 +8,23 @@
 
 ## Overall Summary
 
-**Total tests: 1010 | Passed: 989 | Failed: 21 | Rate: 97.9%**
+**Total tests: 1015 | Passed: 1005 | Failed: 10 | Rate: 99.0%**
 
 | Category | Tests | Passed | Failed | Rate |
 |----------|-------|--------|--------|------|
 | Anandadi Yoga | 10 | 10 | 0 | 100.0% |
 | Ashtakavarga | 70 | 70 | 0 | 100.0% |
-| Avakhada | 60 | 52 | 8 | 86.7% **!!** |
+| Avakhada | 60 | 60 | 0 | 100.0% |
 | Compatibility | 45 | 45 | 0 | 100.0% |
 | Dasha | 110 | 110 | 0 | 100.0% |
 | Disha Shool | 10 | 10 | 0 | 100.0% |
 | Divisional | 80 | 80 | 0 | 100.0% |
-| Dosha | 30 | 21 | 9 | 70.0% **!!** |
+| Dosha | 30 | 23 | 7 | 76.7% **!!** |
 | Numerology | 30 | 30 | 0 | 100.0% |
 | Panchanga | 50 | 50 | 0 | 100.0% |
 | Planets | 490 | 490 | 0 | 100.0% |
 | Sade Sati | 20 | 17 | 3 | 85.0% **!!** |
-| Yogini Dasha | 5 | 4 | 1 | 80.0% **!!** |
+| Yogini Dasha | 10 | 10 | 0 | 100.0% |
 
 ## Anandadi Yoga
 
@@ -36,29 +36,16 @@
 
 ## Avakhada
 
-**52/60 passed**
-
-### Failures
-
-| Chart | Sub | Field | vedic-calc | Reference | Source | Notes |
-|-------|-----|-------|-----------|-----------|--------|-------|
-| Delhi 1992 | Varna | Varna | `Vaishya` | `Kshatriya` | AstrologyAPI |  |
-| NYC 1985 | Varna | Varna | `Kshatriya` | `Vaishya` | AstrologyAPI |  |
-| Chennai 2000 | Varna | Varna | `Kshatriya` | `Vaishya` | AstrologyAPI |  |
-| London 1975 | Varna | Varna | `Kshatriya` | `Vaishya` | AstrologyAPI |  |
-| Varanasi 1988 | Varna | Varna | `Vaishya` | `Kshatriya` | AstrologyAPI |  |
-| Jaipur 2005 | Varna | Varna | `Vaishya` | `Kshatriya` | AstrologyAPI |  |
-| Jaipur 2005 | Gana | Gana | `Deva` | `Manushya` | AstrologyAPI |  |
-| Sydney 1998 | Varna | Varna | `Vaishya` | `Kshatriya` | AstrologyAPI |  |
+**60/60 passed**
 
 ### Breakdown
 
 | Subcategory | Tests | Passed | Rate |
 |-------------|-------|--------|------|
-| Gana | 10 | 9 | 90% |
+| Gana | 10 | 10 | 100% |
 | Nadi | 10 | 10 | 100% |
 | Tatva | 10 | 10 | 100% |
-| Varna | 10 | 3 | 30% |
+| Varna | 10 | 10 | 100% |
 | Vashya | 10 | 10 | 100% |
 | Yoni | 10 | 10 | 100% |
 
@@ -95,7 +82,7 @@
 
 ## Dosha
 
-**21/30 passed**
+**23/30 passed**
 
 ### Failures
 
@@ -104,11 +91,9 @@
 | Delhi 1992 | Kalsarpa | Present | `False` | `True` | AstrologyAPI |  |
 | Delhi 1992 | Sadhesati | Currently Active | `True` | `False` | AstrologyAPI | API moon_sign=Sagittarius, saturn_sign=Pisces |
 | Varanasi 1988 | Kalsarpa | Present | `False` | `True` | AstrologyAPI |  |
-| Jaipur 2005 | Manglik | Present | `False` | `True` | AstrologyAPI | vc_severity=none, api_status=LESS_EFFECTIVE |
 | Jaipur 2005 | Kalsarpa | Present | `False` | `True` | AstrologyAPI |  |
 | Jaipur 2005 | Sadhesati | Currently Active | `False` | `True` | AstrologyAPI | API moon_sign=Aries, saturn_sign=Pisces |
 | Sydney 1998 | Kalsarpa | Present | `False` | `True` | AstrologyAPI |  |
-| Tokyo 2010 | Manglik | Present | `False` | `True` | AstrologyAPI | vc_severity=none, api_status=EFFECTIVE |
 | Tokyo 2010 | Sadhesati | Currently Active | `False` | `True` | AstrologyAPI | API moon_sign=Aquarius, saturn_sign=Pisces |
 
 ### Breakdown
@@ -116,7 +101,7 @@
 | Subcategory | Tests | Passed | Rate |
 |-------------|-------|--------|------|
 | Kalsarpa | 10 | 6 | 60% |
-| Manglik | 10 | 8 | 80% |
+| Manglik | 10 | 10 | 100% |
 | Sadhesati | 10 | 7 | 70% |
 
 ## Numerology
@@ -170,19 +155,13 @@
 
 | Chart | Sub | Field | vedic-calc | Reference | Source | Notes |
 |-------|-----|-------|-----------|-----------|--------|-------|
-| Delhi 1992 | Currently Active | Status | `False` | `True` | Prokerala |  |
-| Varanasi 1988 | Currently Active | Status | `False` | `True` | Prokerala |  |
-| Sydney 1998 | Currently Active | Status | `False` | `True` | Prokerala |  |
+| Delhi 1992 | Currently Active | Status | `True` | `False` | AstrologyAPI | vc_phase=small_panoti, api_moon=Sagittarius, api_saturn=Pisces |
+| Varanasi 1988 | Currently Active | Status | `True` | `False` | AstrologyAPI | vc_phase=ashtama_shani, api_moon=Leo, api_saturn=Pisces |
+| Sydney 1998 | Currently Active | Status | `True` | `False` | AstrologyAPI | vc_phase=small_panoti, api_moon=Sagittarius, api_saturn=Pisces |
 
 ## Yogini Dasha
 
-**4/5 passed**
-
-### Failures
-
-| Chart | Sub | Field | vedic-calc | Reference | Source | Notes |
-|-------|-----|-------|-----------|-----------|--------|-------|
-| Jaipur 2005 | Current Major | Now | `Saturn` | `Rahu (Sankata)` | AstrologyAPI |  |
+**10/10 passed**
 
 ## Methodology
 
