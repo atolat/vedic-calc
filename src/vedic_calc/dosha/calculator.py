@@ -38,13 +38,24 @@ def _is_in_same_sign(chart: BirthChart, planet1: Planet, planet2: Planet) -> boo
 
 _MANGLIK_HOUSES = {1, 2, 4, 7, 8, 12}
 
+# Mars has special drishti (aspects) on the 4th, 7th, and 8th houses
+# from its position. These aspects effectively extend Mars's influence
+# into those houses, so we must check if any aspected house falls in
+# a manglik house from each reference point.
+_MARS_ASPECT_OFFSETS = (4, 7, 8)
+
 
 def _detect_manglik(chart: BirthChart) -> DoshaResult:
     """Detect Manglik Dosha (Kuja Dosha).
 
     Mars in houses 1, 2, 4, 7, 8, or 12 from lagna, Moon, or Venus
-    causes Manglik Dosha. Severity depends on how many reference points
-    are afflicted. Several classical cancellation conditions are checked.
+    causes Manglik Dosha. Mars's special aspects (4th, 7th, 8th drishti)
+    are also considered — if Mars aspects any of these houses from a
+    reference point, it counts as affliction (per BPHS Ch. 81 and
+    widely-used practitioner conventions).
+
+    Severity depends on how many reference points are afflicted.
+    Several classical cancellation conditions are checked.
     """
     mars_sign = chart.planets[Planet.MARS].sign
 
@@ -58,8 +69,20 @@ def _detect_manglik(chart: BirthChart) -> DoshaResult:
     afflicted_refs: list[str] = []
     for ref_name, ref_sign in ref_signs.items():
         house_from_ref = _sign_distance(ref_sign, mars_sign)
+
+        # Direct placement: Mars sits in a manglik house from this reference
         if house_from_ref in _MANGLIK_HOUSES:
             afflicted_refs.append(ref_name)
+            continue
+
+        # Aspect-based: Mars's special drishti (4th, 7th, 8th) may land
+        # on a manglik house from this reference point. We compute the
+        # house number (from the reference) that each Mars aspect hits.
+        for offset in _MARS_ASPECT_OFFSETS:
+            aspected_house = (house_from_ref + offset - 1) % 12 + 1
+            if aspected_house in _MANGLIK_HOUSES:
+                afflicted_refs.append(f"{ref_name} (aspect)")
+                break
 
     is_present = len(afflicted_refs) > 0
 
